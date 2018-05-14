@@ -12,10 +12,44 @@ enum Command<T: Add> {
 
 
 #[derive(Debug, PartialEq, Clone)]
-struct State<T: Add> {
+struct State<T: Add + Clone> {
     ammo: u32,
     position: Point2d<T>,
 }
+
+impl <T: Clone + Add<Output=T>> State <T> {
+
+    fn next_state(&self, command: Command<T>) -> State<T> {
+
+        match command {
+            Command::Shoot => {
+                State {
+                    ammo: self.ammo.clone() - 1,
+                    position: self.position.clone(),
+                }
+            },
+            Command::Translate(p) => {
+                State {
+                    ammo: self.ammo.clone(),
+                    position: self.position.clone() + p,
+                }
+            }
+        }
+    }
+
+    fn final_state (self, commands: Vec<Command<T>>) -> State<T> {
+
+        let mut state = self.clone();
+
+        for command in commands.iter() {
+            state = state.next_state(command.clone());
+        }
+
+        state
+
+    }
+}
+
 
 #[derive(Debug, PartialEq, Clone)]
 struct Point2d<T: Add> {
@@ -23,7 +57,7 @@ struct Point2d<T: Add> {
     y: T,
 }
 
-impl <T> std::ops::Add for Point2d<T> where T: Add<Output = T> {
+impl <T> Add for Point2d<T> where T: Add<Output = T> {
 
     type Output = Point2d<T>;
 
@@ -35,27 +69,16 @@ impl <T> std::ops::Add for Point2d<T> where T: Add<Output = T> {
     }
 }
 
+impl<T> Point2d<T> where T: Add<Output = T> {
 
-fn update_state<T:Add<Output = T>>(state: State<T>, command: Command<T>) -> State<T> {
-
-    match command {
-        Command::Shoot => {
-            State {
-                ammo: state.ammo - 1,
-                position: state.position,
-            }
-        },
-        Command::Translate(p) => {
-            State {
-                ammo: state.ammo,
-                position: state.position + p,
-            }
+    fn new (x: T, y: T) -> Point2d<T> {
+        Point2d {
+            x: x,
+            y: y,
         }
     }
+
 }
-
-
-
 
 #[cfg(test)]
 mod tests {
@@ -69,14 +92,21 @@ mod tests {
 
     #[test]
     fn test_add_points() {
-        let p1 = Point2d{x:2,y:3};
-        let p2 = Point2d{x:1,y:4};
+        let p1 = Point2d {
+            x:2,
+            y:3,
+        };
+        let p2 = Point2d {
+            x:1,
+            y:4,
+        };
         let p3 = p1 + p2;
         assert_eq!(p3, Point2d {x: 3, y: 7});
     }
 
     #[test]
     fn test_add_point_to_state() {
+
         let s1 = State {
             ammo: 10,
             position: Point2d {
@@ -108,14 +138,46 @@ mod tests {
         let s2 = State {
             ammo: 10,
             position: Point2d {
-                x: -1.4, y: 3.5
+                x: -1.4,
+                y: 3.5,
             }
         };
 
         let c1 = Command::Translate(Point2d {x: -1.4, y: 3.5});
 
-        let new_state = update_state(s1, c1);
+        let new_state = s1.next_state(c1);
         assert_eq!(new_state, s2 )
+    }
+
+    #[test]
+    fn test_vec_update_state() {
+
+        let mut cmds = Vec::new();
+        cmds.push(Command::Translate(Point2d::new(1.2, 4.3)));
+        cmds.push(Command::Translate(Point2d::new(5.3, 2.2)));
+
+        let mut s = State {
+            ammo: 0,
+            position: Point2d {
+                x: 0.0,
+                y: 0.0,
+            }
+        };
+
+        let f = State {
+            ammo: 0,
+            position: Point2d {
+                x: 6.5,
+                y: 6.5,
+            }
+        };
+
+        for cmd in cmds.iter() {
+            s = s.next_state(cmd.clone());
+        }
+
+        assert_eq! {s, f};
+
     }
 
 
