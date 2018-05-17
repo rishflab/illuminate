@@ -80,7 +80,7 @@ impl<T> Point2d<T> where T: Add<Output = T> {
 mod tests {
 
     use super::*;
-    
+
     #[test]
     fn test_add_points() {
         let p1 = Point2d {
