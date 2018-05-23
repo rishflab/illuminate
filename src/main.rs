@@ -3,44 +3,23 @@ use std::io::Result;
 use std::env;
 use std::io::{Read, Write};
 
+extern crate teleport;
 
-fn handle_client(mut stream: TcpStream) {
-    let buf = String::new();
-    let incoming = stream.read_to_string(&mut buf.clone()).unwrap();
-//    match incoming {
-//        Ok(t) => {
-//            println!("{}", t);
-//        },
-//        Err(e) => {
-//            println!("{}", e);
-//        }
-//    }
-    println!("{:?}", incoming)
-}
+use teleport::network::server::Server;
+use teleport::world::state::*;
 
 
 
-enum Purpose {
-    Listener,
-    Sender,
-}
-
-impl Purpose {
-    fn parse (string: String) -> Purpose {
-        match &*string {
-            listener => Purpose::Listener,
-            sender => Purpose::Sender,
-        }
-    }
-}
-
-
-fn parse_args(args: Vec<String>) -> Some((Purpose, u16)) {
+fn parse_args(args: Vec<String>) -> Option<(u16, u16)> {
 
      match args.len() {
         3 => {
-            purpose = Purpose::parse(args[2].clone());
-            port = args[1].clone();
+            let arg1 = args[1].clone();
+            let arg2 = args[2].clone();
+            match (arg1.parse::<u16>(), arg2.parse::<u16>()) {
+                (Ok(a), Ok(b)) => Some((a, b)),
+                (_,_) => None,
+            }
         },
         _ => {
             None
@@ -52,53 +31,7 @@ fn main() -> Result<()> {
 
     let args: Vec<String> = env::args().collect();
 
-    let mut send_port = "80".to_string();
-
-    let mut port = "3000".to_string();
-
-    let mut purpose =  Purpose::Sender;
-
-    let mut localhost = "127.0.0.1".to_owned();
-
-
-    eprintln!("{}", port);
-
-    let port_int = port.parse::<u16>().unwrap();
-
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port_int);
-
-
-    match purpose {
-        Purpose::Listener => {
-
-            let listener = TcpListener::bind(addr).unwrap();
-
-
-            for stream in listener.incoming() {
-                match stream {
-                    Ok(b) => {
-                        //println!("ewfwefwe");
-                        handle_client(b);
-                    },
-                    Err(e) => {
-                        println!("TCP stream error!")
-                    }
-                }
-            }
-
-
-        },
-        Purpose::Sender => {
-
-            println!("sending");
-
-            let mut stream = TcpStream::connect(addr).unwrap();
-
-
-            let _ = stream.write(b"hello");
-
-        },
-    }
+    let server = Server::new(3000, 3001);
 
     Ok(())
 }
