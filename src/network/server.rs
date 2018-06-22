@@ -1,26 +1,32 @@
 use std::net::*;
 use std::io::Result;
-use std::env;
 use std::io::{Read, Write};
 
 pub struct Server {
     listener: TcpListener,
-    stream: TcpStream,
 }
 
 impl Server {
-    pub fn new (stream_port: u16, listen_port: u16) -> Server {
+    pub fn new(port: u16) -> Server {
 
-        let stream_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), stream_port);
-        let listen_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), listen_port);
 
-        let listener = TcpListener::bind(listen_addr).unwrap();
-        let stream = TcpStream::connect(stream_addr).unwrap();
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+
+        let listener = TcpListener::bind(addr).unwrap();
 
         Server {
             listener: listener,
-            stream: stream,
         }
+    }
+
+    pub fn send(msg: &str, port: u16) -> Result<usize> {
+
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+
+        let mut stream = TcpStream::connect(addr).unwrap();
+
+        stream.write(msg.as_bytes())
+
     }
 
     fn handle_client(mut stream: TcpStream) {

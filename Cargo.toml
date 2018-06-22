@@ -4,3 +4,8 @@ version = "0.1.0"
 authors = ["rishflab"]
 
 [dependencies]
+specs =  "0.12.0"
+shrev = "1.0.1"
+
+[examples]
+
