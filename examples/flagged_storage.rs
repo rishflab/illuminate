@@ -1,70 +1,79 @@
+//extern crate hibitset;
+extern crate shrev;
 extern crate specs;
 
-use specs::{Component, FlaggedStorage, Join, System, VecStorage, WriteStorage};
 use specs::prelude::*;
 
-pub struct Comp(u32);
-
-impl Component for Comp {
-    type Storage = FlaggedStorage<Self, VecStorage<Self>>;
+struct TrackedComponent(u64);
+impl Component for TrackedComponent {
+    type Storage = FlaggedStorage<Self>;
 }
 
-pub struct CompSystem{
-    // These keep track of where you left off in the event channel.
+struct SysA {
     modified_id: ReaderId<ModifiedFlag>,
-    inserted_id: ReaderId<InsertedFlag>,
-
-    // The bitsets you want to populate with modification/insertion events.
     modified: BitSet,
-    inserted: BitSet,
 }
 
-impl<'a> System<'a> for CompSystem {
-
-    type SystemData = (Entities<'a>, WriteStorage<'a, Comp>);
-
-    fn run(&mut self, (entities, mut comps): Self::SystemData) {
-        // We want to clear the bitset first so we don't have left over events
-        // from the last frame.
-        //
-        // However, if you want to accumulate changes over a couple frames then you
-        // can only clear it when necessary. (This might be useful if you have some
-        // sort of "tick" system in your game and only want to do operations every
-        // 1/4th of a second or something)
-        //
-        // It is not okay to only read the events in an interval though as that could
-        // leave behind events which would end up growing the event ring buffer to
-        // extreme sizes.
-        self.modified.clear();
-        self.inserted.clear();
-
-
-        // This will only include inserted components from last read, note that this
-        // will not include `insert` calls if there already was a pre-existing component.
-        comps.populate_inserted(&mut self.inserted_id, &mut self.inserted);
-
-        // Iterates over all components like normal.
-        for comp in (&comps).join() {
-            // ...
+impl SysA {
+    fn new(world: &mut World) -> Self {
+        let mut components = world.write_storage::<TrackedComponent>();
+        let readerid = components.track_modified();
+        SysA {
+            modified_id: readerid,
+            modified: BitSet::new(),
         }
-
-
-
-
-
     }
+}
 
+impl<'a> System<'a> for SysA {
+
+    type SystemData = (Entities<'a>, ReadStorage<'a, TrackedComponent>);
+
+    fn run(&mut self, (entities, tracked): Self::SystemData) {
+        tracked.populate_modified(&mut self.modified_id, &mut self.modified);
+
+        for (entity, _tracked, _) in (&*entities, &tracked, &self.modified).join() {
+            println!("modified: {:?}", entity);
+        }
+    }
+}
+
+#[derive(Default)]
+struct SysB;
+impl<'a> System<'a> for SysB {
+
+    type SystemData = (Entities<'a>, WriteStorage<'a, TrackedComponent>);
+
+    fn run(&mut self, (entities, mut tracked): Self::SystemData) {
+        for (entity, mut restricted) in (&*entities, &mut tracked.restrict_mut()).join() {
+            if entity.id() % 1 == 0 {
+                let mut comp = restricted.get_mut_unchecked();
+                comp.0 += 1;
+            }
+        }
+    }
 }
 
 fn main() {
-
     let mut world = World::new();
-    world.register::<Comp>();
+    world.register::<TrackedComponent>();
 
-    let ent = world.create_entity().with(Comp(5)).build();
+    let sysa = SysA::new(&mut world);
 
-    let mut dispatcher = DispatcherBuilder::new().with(CompSystem, "comp_system", &[]).build();
 
-    dispatcher.dispatch(&world.res);
+    for _ in 0..10 {
+        world.create_entity().with(TrackedComponent(0)).build();
+    }
 
+    let mut dispatcher = DispatcherBuilder::new()
+        .with(sysa, "sys_a", &[])
+        .with(SysB::default(), "sys_b", &[])
+        .build();
+
+
+    dispatcher.dispatch(&mut world.res);
+    world.maintain();
+
+    dispatcher.dispatch(&mut world.res);
+    world.maintain();
 }
