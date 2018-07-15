@@ -6,8 +6,6 @@ use std::io::{Read, Write};
 extern crate teleport;
 
 use teleport::network::server::Server;
-use teleport::world::state::*;
-
 
 
 fn parse_args(args: Vec<String>) -> Option<(u16, u16)> {
@@ -22,7 +20,7 @@ fn parse_args(args: Vec<String>) -> Option<(u16, u16)> {
             }
         },
         _ => {
-            None
+            panic!("incorrect arguments")
         },
     }
 }
@@ -31,7 +29,18 @@ fn main() -> Result<()> {
 
     let args: Vec<String> = env::args().collect();
 
-    let server = Server::new(3000, 3001);
+    let ports = parse_args(args);
+
+    let (listen_port,send_port) = match ports {
+        Some((a,b)) => {
+            (a,b)
+        },
+        None => panic!(),
+    };
+
+    let server = Server::new(listen_port);
+
+    //Server::send("hello", send_port);
 
     Ok(())
 }
