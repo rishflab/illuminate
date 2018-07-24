@@ -5,7 +5,7 @@ extern crate teleport;
 use specs::prelude::*;
 use shrev::*;
 
-
+#[derive(Clone, Debug)]
 struct MoveCommand {
     entity: Entity,
     translate: f32,
@@ -39,8 +39,6 @@ impl Default for CommandBuffer {
     }
 }
 
-
-
 struct MovePosition {
 
 }
@@ -72,20 +70,20 @@ impl<'a> System<'a> for CommandAllocator {
 
     type SystemData = (Read<'a, CommandBuffer>, WriteStorage<'a, MoveCommand>);
 
-    fn run(&mut self, (command_buffer, mut move_command):Self::SystemData) {
+    fn run(&mut self, (command_buffer, mut next_moves):Self::SystemData) {
 
-        for command in command_buffer.move_commands.iter() {
+        //for command in command_buffer.move_commands.iter() {
+
+            let command = &command_buffer.move_commands[0];
 
             let entity = command.entity;
 
-            let mut entity_move_command = move_command.get_mut(entity).unwrap();
 
-            let mut move_command = *command_buffer.move_commands.get_mut(0).unwrap();
+            let mut entity_move_command = next_moves.get_mut(entity).unwrap();
 
-            entity_move_command = move_command;
+            *entity_move_command = command.clone();
 
-
-        }
+        //}
     }
 
 }
