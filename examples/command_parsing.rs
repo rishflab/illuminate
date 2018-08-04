@@ -58,6 +58,9 @@ impl<'a> System<'a> for MovePosition {
 
     fn run(&mut self, (move_commands, mut positions): Self::SystemData) {
 
+struct MovePosition {
+
+
         for (move_command, position) in (&move_commands, &mut positions).join() {
 
             if position.0 + move_command.translate < 10.0 {
@@ -92,6 +95,14 @@ impl<'a> System<'a> for CommandAllocator {
             let entity = command.entity;
 
             let entity_move_command = next_moves.get_mut(entity).unwrap();
+
+            let command = &command_buffer.move_commands[0];
+
+            let entity = command.entity;
+
+
+            let mut entity_move_command = next_moves.get_mut(entity).unwrap();
+
 
             *entity_move_command = command.clone();
 
