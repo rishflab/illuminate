@@ -26,7 +26,6 @@ impl Component for AddDriver {
     type Storage = VecStorage<Self>;
 }
 
-
 struct UpdateDriverPosition {
     position: Position,
 }
@@ -42,12 +41,6 @@ impl Component for Velocity {
 }
 
 struct PhysicsUpdate;
-
-impl<'a>PhysicsUpdate for PhysicsUpdate {
-
-    
-
-}
 
 struct DriverUpdater;
 
@@ -65,16 +58,16 @@ impl<'a> System<'a> for DriverUpdater {
 //        let player_position: &mut PlayerPosition = player_position.get_mut(move_this_player_3m_north).unwrap();
 //        player_position.move_3m_north();
 
-        for (command, id) in (&commands, &ids).par_join(){
-
-            let driver_position = positions.get_mut(command.id).unwrap();
-
-            if *driver_position.0 <= 10.0 {
-                 *driver_position = command.position.into();
-            }
-
-
-        }
+//        for (command, id) in (&commands, &ids).par_join(){
+//
+//            let driver_position = positions.get_mut(command.id).unwrap();
+//
+//            if *driver_position.0 <= 10.0 {
+//                 *driver_position = command.position.into();
+//            }
+//
+//
+//        }
 
     }
 }

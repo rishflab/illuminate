@@ -1,21 +1,14 @@
 #![feature(pattern_parentheses)]
 
-//pub mod world;
-//pub mod network;
+extern crate cgmath;
+extern crate rhusics_core;
+extern crate rhusics_ecs;
+extern crate shrev;
+extern crate specs;
+extern crate smallvec;
+extern crate collision;
 
+pub mod network;
+pub mod systems;
+pub mod components;
 
-
-fn square(x: i32) -> i32 {
-    x*x
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::square;
-
-    #[test]
-    fn test_square() {
-        assert_eq!(square(2), 4);
-    }
-}
