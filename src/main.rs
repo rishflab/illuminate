@@ -27,18 +27,18 @@ fn parse_args(args: Vec<String>) -> Option<(u16, u16)> {
 
 fn main() -> Result<()> {
 
-    let args: Vec<String> = env::args().collect();
-
-    let ports = parse_args(args);
-
-    let (listen_port,send_port) = match ports {
-        Some((a,b)) => {
-            (a,b)
-        },
-        None => panic!(),
-    };
-
-    let server = Server::new(listen_port);
+//    let args: Vec<String> = env::args().collect();
+//
+//    let ports = parse_args(args);
+//
+//    let (listen_port,send_port) = match ports {
+//        Some((a,b)) => {
+//            (a,b)
+//        },
+//        None => panic!(),
+//    };
+//
+//    let server = Server::new(listen_port);
 
     //Server::send("hello", send_port);
 

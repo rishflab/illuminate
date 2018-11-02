@@ -11,6 +11,7 @@ rhusics-core = {git = "https://github.com/rustgd/rhusics.git"}
 cgmath = "0.16"
 collision = "0.18.0"
 smallvec = "0.6.5"
+bincode = "*"
 
 [examples]
 
