@@ -1,2 +1,4 @@
 pub mod server;
-mod rpc;
+pub mod client;
+pub mod message;
+

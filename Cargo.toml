@@ -12,6 +12,17 @@ cgmath = "0.16"
 collision = "0.18.0"
 smallvec = "0.6.5"
 bincode = "*"
+serde_derive = "*"
+serde = "*"
 
 [examples]
+
+
+[[bin]]
+name = "send_rpc"
+path = "src/bin/utils/send_rpc.rs"
+
+[[bin]]
+name = "rpc_server"
+path = "src/bin/rpc_server.rs"
 

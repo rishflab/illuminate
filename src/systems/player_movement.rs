@@ -41,65 +41,65 @@ struct SpaceShip {
 
 
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-    use super::*;
+//     use super::*;
 
-    #[test]
-    fn thrust() {
+//     #[test]
+//     fn thrust() {
 
-        let mut world = World::new();
+//         let mut world = World::new();
 
-        let mut collision_system
-        = BasicCollisionSystem2::<f32, BodyPose2<f32>, ()>::new()
-            .with_broad_phase(BroadBruteForce2::default())
-            .with_narrow_phase(GJK2::new());
+//         let mut collision_system
+//         = BasicCollisionSystem2::<f32, BodyPose2<f32>, ()>::new()
+//             .with_broad_phase(BroadBruteForce2::default())
+//             .with_narrow_phase(GJK2::new());
 
-        //collision_system.setup(&mut world.res);
+//         //collision_system.setup(&mut world.res);
 
-        let mut reader_1 = world
-            .write_resource::<EventChannel<ContactEvent2<f32>>>()
-            .register_reader();
+//         let mut reader_1 = world
+//             .write_resource::<EventChannel<ContactEvent2<f32>>>()
+//             .register_reader();
 
-        world
-            .create_entity()
-            .with(CollisionShape2::<f32, BodyPose2<f32>, ()>::new_simple(
-                CollisionStrategy::FullResolution,
-                CollisionMode::Discrete,
-                Rectangle::new(1.0, 1.0).into(),
-            ))
-            .with(BodyPose2::<f32>::new(
-                Point2::new(0.0, 0.0),
-                Rotation2::from_angle(Rad(0.0)),
-            ))
-            .build();
+//         world
+//             .create_entity()
+//             .with(CollisionShape2::<f32, BodyPose2<f32>, ()>::new_simple(
+//                 CollisionStrategy::FullResolution,
+//                 CollisionMode::Discrete,
+//                 Rectangle::new(1.0, 1.0).into(),
+//             ))
+//             .with(BodyPose2::<f32>::new(
+//                 Point2::new(0.0, 0.0),
+//                 Rotation2::from_angle(Rad(0.0)),
+//             ))
+//             .build();
 
-        world
-            .create_entity()
-            .with(CollisionShape2::<f32, BodyPose2<f32>, ()>::new_simple(
-                CollisionStrategy::FullResolution,
-                CollisionMode::Discrete,
-                Rectangle::new(1.0, 1.0).into(),
-            ))
-            .with(BodyPose2::<f32>::new(
-                Point2::new(0.98, 0.98),
-                Rotation2::from_angle(Rad(0.0)),
-            ))
-            .build();
-
-
-        collision_system.run_now(&world.res);
+//         world
+//             .create_entity()
+//             .with(CollisionShape2::<f32, BodyPose2<f32>, ()>::new_simple(
+//                 CollisionStrategy::FullResolution,
+//                 CollisionMode::Discrete,
+//                 Rectangle::new(1.0, 1.0).into(),
+//             ))
+//             .with(BodyPose2::<f32>::new(
+//                 Point2::new(0.98, 0.98),
+//                 Rotation2::from_angle(Rad(0.0)),
+//             ))
+//             .build();
 
 
-        println!(
-            "Contacts: {:?}",
-            world
-                .read_resource::<EventChannel<ContactEvent2<f32>>>()
-                .read(&mut reader_1)
-                .collect::<Vec<_>>()
-        );
-    }
-}
+//         collision_system.run_now(&world.res);
+
+
+//         println!(
+//             "Contacts: {:?}",
+//             world
+//                 .read_resource::<EventChannel<ContactEvent2<f32>>>()
+//                 .read(&mut reader_1)
+//                 .collect::<Vec<_>>()
+//         );
+//     }
+// }
 
 

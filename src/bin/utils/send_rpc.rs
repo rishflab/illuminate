@@ -1,34 +1,29 @@
+#[macro_use]
+extern crate serde_derive;
+extern crate bincode;
+extern crate teleport;
+
 use std::net::UdpSocket;
-use cgmath::{Point2, Vector2};
+use bincode::{deserialize, serialize};
+use teleport::network::messages::Point2;
 
-fn parse_args(args: Vec<String>) -> (u16, String) {
+fn main() -> std::io::Result<()> {
 
-     match args.len() {
-        3 => {
-            let arg1 = args[1].clone();
-            let arg2 = args[2].clone();
-            match (arg1.parse::<u16>(), arg2.parse::<u16>()) {
-                (Ok(a), Ok(b)) => Some((a, b)),
-                (_,_) => None,
-            }
-        },
-        _ => {
-            panic!("incorrect number of arguments")
-        },
-    }
-}
+    let mut socket = UdpSocket::bind("127.0.0.1:34251")?;
 
-fn main() -> Result<()> {
+    let p =  Point2{x: 32.30, y:12.12};
+    let encoded: &[u8] = &serialize(&p).unwrap();
+    assert_eq!(encoded.len(), 4 + 4);
 
-    let args: Vec<String> = env::args().collect();
+    let decoded: Point2 = deserialize(&encoded[..]).unwrap();
 
-    let ports = parse_args(args);
+    assert_eq!(p, decoded);
 
-    let mut socket = UdpSocket::bind("127.0.0.1:34254")?;
+    println!("{:?}", decoded);
 
-    Server::send("hello", send_port);
 
-    socket.send_to(buf, &src)?;
+    socket.send_to(encoded, "127.0.0.1:34254")?;
+
 
     Ok(())
 }
