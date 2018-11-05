@@ -7,6 +7,10 @@ extern crate shrev;
 extern crate specs;
 extern crate smallvec;
 extern crate collision;
+#[macro_use]
+extern crate serde_derive;
+extern crate bincode;
+
 
 pub mod network;
 pub mod systems;
