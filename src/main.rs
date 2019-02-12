@@ -3,9 +3,9 @@ use std::io::Result;
 use std::env;
 use std::io::{Read, Write};
 
-extern crate teleport;
+extern crate blackhole;
 
-use teleport::network::server::Server;
+use blackhole::network::server::Server;
 
 
 fn parse_args(args: Vec<String>) -> Option<(u16, u16)> {

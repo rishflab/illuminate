@@ -11,8 +11,8 @@ extern crate collision;
 extern crate serde_derive;
 extern crate bincode;
 
-
 pub mod network;
 pub mod systems;
 pub mod components;
-
+pub mod renderer;
+pub mod input;

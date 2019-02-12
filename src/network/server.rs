@@ -22,7 +22,7 @@ impl Server {
         // Receives a single datagram message on the socket. If `buf` is too small to hold
         // the message, it will be cut off.
         let mut buf = [0; 1024];
-        let (amt, src) = socket.recv_from(&mut buf)?;
+        let (amt, src) = socket.recv_from(&mut buf).unwrap();
 
         // Redeclare `buf` as slice of the received data and send reverse data back to origin.
         let buf = &mut buf[..amt];
@@ -31,6 +31,7 @@ impl Server {
 
         Server {
             socket: socket,
+            buffer_size: 1024,
         }
    }
 

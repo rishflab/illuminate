@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate serde_derive;
 extern crate bincode;
-extern crate teleport;
+extern crate blackhole;
 
 use std::net::UdpSocket;
 use bincode::{deserialize, serialize};
-use teleport::network::messages::Point2;
+use blackhole::network::messages::Point2;
 
 fn main() -> std::io::Result<()> {
 
