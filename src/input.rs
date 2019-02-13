@@ -2,6 +2,7 @@ use winit::{
     Event, EventsLoop, WindowEvent
 };
 
+use specs::prelude::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct UserInput {

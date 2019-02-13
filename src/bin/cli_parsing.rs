@@ -3,7 +3,6 @@ use std::io::Result;
 use std::env;
 use std::io::{Read, Write};
 
-extern crate blackhole;
 
 use blackhole::network::server::Server;
 

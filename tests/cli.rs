@@ -15,7 +15,7 @@ use std::error::Error;
 
 #[test]
 fn say_hello() {
-    let mut listener = Command::new("./target/debug/teleport")
+    let mut listener = Command::new("./target/debug/cli_parsing")
         .arg("3000")
         .arg("3001")
         .stdout(Stdio::piped())
