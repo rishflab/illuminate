@@ -59,7 +59,12 @@ const COLOR_RANGE: i::SubresourceRange = i::SubresourceRange {
 fn main() {
     env_logger::init();
 
-    let numbers: Vec<f32> = vec![1.0, 2.0, 3.0];
+    let numbers: Vec<f32> = vec![
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, -3.0, 1.0
+    ];
     let stride = std::mem::size_of::<f32>() as u64;
 
     let mut events_loop = winit::EventsLoop::new();
@@ -259,22 +264,6 @@ fn main() {
         }
         Backbuffer::Framebuffer(_) => unimplemented!("couldnt create image views"),
     };
-
-
-//
-//
-//    unsafe {
-//        let desc_set = desc_pool.allocate_set(&set_layout).unwrap();
-//
-//        device.write_descriptor_sets(Some(
-//            pso::DescriptorSetWrite {
-//                set: &desc_set,
-//                binding: 1,
-//                array_offset: 0,
-//                descriptors: Some(pso::Descriptor::Buffer(&device_buffer, None .. None)),
-//            }
-//        ));
-//    }
 
 
     let mut running = true;

@@ -7,8 +7,8 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 layout(binding = 0, rgba8) uniform writeonly image2D img;
 
-layout(binding = 1) buffer PrimeIndices {
-    float[] size;
+layout(binding = 1) buffer Camera {
+    mat4 view;
 }; // this is used as both input and output for convenience
 
 struct Sphere {
@@ -89,11 +89,13 @@ void main() {
 
     vec3 cam_origin = vec3(0.0, 0.0, 0.0);
 
-    mat4 view_mat = mat4(1.0);
 
-    view_mat[3][0] = 0.0;
-    view_mat[3][1] = 0.0;
-    view_mat[3][2] = -1.0;
+    mat4 view_mat = view;
+    //mat4 view_mat = mat4(1.0);
+
+//    view_mat[3][0] = 0.0;
+//    view_mat[3][1] = 0.0;
+//    view_mat[3][2] = -1.0;
 
     cam_origin = (view_mat * vec4(cam_origin, 1.0)).xyz;
 

@@ -15,6 +15,7 @@ vulkan = ["gfx-backend-vulkan"]
 unstable = []
 
 [dependencies]
+nalgebra-glm = "0.1"
 env_logger = "0.5"
 image = "0.19"
 log = "0.4"
