@@ -25,6 +25,7 @@ extern crate gfx_hal as hal;
 extern crate glsl_to_spirv;
 extern crate image;
 extern crate winit;
+extern crate nalgebra_glm as glm;
 
 use hal::format::{AsFormat, ChannelType, Rgba8Srgb as ColorFormat, Swizzle};
 use hal::pass::Subpass;
@@ -59,12 +60,17 @@ const COLOR_RANGE: i::SubresourceRange = i::SubresourceRange {
 fn main() {
     env_logger::init();
 
-    let numbers: Vec<f32> = vec![
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, -3.0, 1.0
-    ];
+    let view = glm::look_at(
+        &glm::vec3(2.0,0.0,7.0), // Camera is at (4,3,3), in World Space
+        &glm::vec3(2.0,0.0,0.0), // and looks at the origin
+        &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
+    );
+
+    let view = glm::inverse(&view);
+
+    let numbers: Vec<f32> =  view.as_slice().to_vec();
+
+    println!("view mat: {:?}", numbers);
     let stride = std::mem::size_of::<f32>() as u64;
 
     let mut events_loop = winit::EventsLoop::new();
@@ -237,7 +243,6 @@ fn main() {
 
                     println!("img_view: {:?}", rtv);
 
-
                     let desc_set = desc_pool.allocate_set(&set_layout).unwrap();
 
                     device.write_descriptor_sets(Some(
@@ -248,7 +253,6 @@ fn main() {
                             descriptors: Some(pso::Descriptor::Image(&rtv, i::Layout::Present)),
                         }
                     ));
-
 
                     device.write_descriptor_sets(Some(
                         pso::DescriptorSetWrite {
