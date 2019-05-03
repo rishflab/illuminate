@@ -71,11 +71,13 @@ fn main() {
 
     println!("view mat: {:?}", view.data);
 
-    let mut model = glm::translation(&glm::vec3(0.0, 3.0, 0.0));
-
-    let mut model_vec = model.as_slice().to_vec();
 
     let mut buffer = view.data.to_vec().clone();
+
+
+    let mut model = glm::translation(&glm::vec3(0.0, 0.0, 0.0));
+
+    let mut model_vec = model.as_slice().to_vec();
     buffer.append(&mut model_vec);
 
 
@@ -145,13 +147,6 @@ fn main() {
                         stage_flags: pso::ShaderStageFlags::COMPUTE,
                         immutable_samplers: false,
                     },
-                    pso::DescriptorSetLayoutBinding {
-                        binding: 2,
-                        ty: pso::DescriptorType::StorageBuffer,
-                        count: 1,
-                        stage_flags: pso::ShaderStageFlags::COMPUTE,
-                        immutable_samplers: false,
-                    },
                 ],
                 &[],
             )
@@ -171,14 +166,10 @@ fn main() {
 
         let desc_pool = unsafe {
             device.create_descriptor_pool(
-                12,
+                8,
                 &[
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::StorageImage,
-                        count: 4,
-                    },
-                    pso::DescriptorRangeDesc{
-                        ty: pso::DescriptorType::StorageBuffer,
                         count: 4,
                     },
                     pso::DescriptorRangeDesc{
@@ -222,8 +213,6 @@ fn main() {
         device.create_swapchain(&mut surface, swap_config, None)
     }.expect("Can't create swapchain");
 
-
-
     let (device_memory, device_buffer, device_buffer_size) = unsafe {
         create_buffer::<back::Backend>(
             &device,
@@ -235,11 +224,6 @@ fn main() {
         )
     };
 
-    unsafe {
-        let mut writer = device.acquire_mapping_writer::<f32>(&device_memory, 0..device_buffer_size).unwrap();
-        writer[0..buffer.as_slice().len()].copy_from_slice(buffer.as_slice());
-        device.release_mapping_writer(writer).expect("Can't relase mapping writer");
-    }
 
 
     // Create The ImageViews
@@ -281,25 +265,35 @@ fn main() {
                         }
                     ));
 
-                    device.write_descriptor_sets(Some(
-                        pso::DescriptorSetWrite {
-                            set: &desc_set,
-                            binding: 2,
-                            array_offset: 0,
-                            descriptors: Some(pso::Descriptor::Buffer(&device_buffer, None .. None)),
-                        }
-                    ));
-
                     (image, rtv, desc_set)
                 }).collect::<Vec<_>>()
         }
         Backbuffer::Framebuffer(_) => unimplemented!("couldnt create image views"),
     };
 
-
     let mut running = true;
 
+    let mut x = 0.0;
+
     while running {
+
+
+
+        x += 0.001;
+
+        let mut model = glm::translation(&glm::vec3(x, 0.0, 0.0));
+
+        let mut model_vec = model.as_slice().to_vec();
+        let mut buffer = view.data.to_vec().clone();
+        buffer.append(&mut model_vec);
+
+        unsafe {
+            let mut writer = device.acquire_mapping_writer::<f32>(&device_memory, 0..device_buffer_size).unwrap();
+            writer[0..buffer.as_slice().len()].copy_from_slice(buffer.as_slice());
+            device.release_mapping_writer(writer).expect("Can't relase mapping writer");
+        }
+
+
         events_loop.poll_events(|event| {
             if let winit::Event::WindowEvent { event, .. } = event {
                 #[allow(unused_variables)]

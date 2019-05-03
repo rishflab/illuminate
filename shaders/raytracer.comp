@@ -92,7 +92,7 @@ float mollerTrumboreIntersectTriangle(vec3 orig, vec3 dir, vec3 v0, vec3 v1, vec
 
 void model_world_transform(mat4 transform, inout Triangle[12] mesh){
 
-    for(int i=0; i<2; i++){
+    for(int i=0; i<12; i++){
         Triangle old = mesh[i];
         Triangle new = Triangle(vec3(1.0), vec3(1.0), vec3(1.0));
         new.v0 = (transform * vec4(old.v0, 1.0)).xyz;
