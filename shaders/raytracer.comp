@@ -9,7 +9,12 @@ layout(binding = 0, rgba8) uniform writeonly image2D img;
 
 layout(binding = 1) buffer Camera {
     mat4 view;
+    mat4 model;
 };
+
+//layout(binding = 2) buffer Model {
+//    mat4 model;
+//};
 
 struct Sphere {
     vec3 centre;
@@ -85,12 +90,24 @@ float mollerTrumboreIntersectTriangle(vec3 orig, vec3 dir, vec3 v0, vec3 v1, vec
     return -1.0;
 }
 
+void model_world_transform(mat4 transform, inout Triangle[12] mesh){
+
+    for(int i=0; i<12; i++){
+        Triangle old = mesh[i];
+        Triangle new = Triangle(vec3(1.0), vec3(1.0), vec3(1.0));
+        new.v0 = (transform * vec4(old.v0, 1.0)).xyz;
+        new.v1 = (transform * vec4(old.v1, 1.0)).xyz;
+        new.v2 = (transform * vec4(old.v2, 1.0)).xyz;
+        mesh[i] = new;
+    }
+
+}
+
 void main() {
 
     vec3 cam_origin = vec3(0.0, 0.0, 0.0);
 
     mat4 view_mat = view;
-
 
     vec2 raster_coord = gl_GlobalInvocationID.xy + vec2(0.5, 0.5);
 
@@ -108,16 +125,8 @@ void main() {
 
     Ray ray = Ray(cam_origin, ray_direction);
 
-//    const int num = 4;
-//    const Triangle cube[num] = Triangle[num](
-//        Triangle(vec3(0.5, 0.5, 4.0), vec3(3.5, 0.5, 4.0), vec3(0.5, 3.5, 4.0)),
-//        Triangle(vec3(3.5, 3.5, 4.0), vec3(0.5, 3.5, 4.0), vec3(3.5, 0.5, 4.0)),
-//        Triangle(vec3(0.5, 0.5, 4.0), vec3(0.5, 3.5, 4.0), vec3(0.5, 3.5, 7.0)),
-//        Triangle(vec3(0.5, 0.5, 4.0), vec3(0.5, 3.5, 7.0), vec3(0.5, 0.5, 7.0))//,
-//    );
-
-    const int num = 12;
-    const Triangle cube[num] = Triangle[num](
+    int num = 12;
+    Triangle cube[12] = Triangle[12](
         Triangle(vec3(-1.0f,-1.0f,-1.0f), vec3(-1.0f,-1.0f, 1.0f), vec3(-1.0f, 1.0f, 1.0f)),
         Triangle(vec3(1.0f, 1.0f,-1.0f), vec3(-1.0f,-1.0f,-1.0f), vec3(-1.0f, 1.0f,-1.0f)),
         Triangle(vec3(1.0f,-1.0f, 1.0f), vec3(-1.0f,-1.0f,-1.0f), vec3(1.0f,-1.0f,-1.0f)),
@@ -132,7 +141,7 @@ void main() {
         Triangle(vec3(1.0f, 1.0f, 1.0f), vec3(-1.0f, 1.0f, 1.0f), vec3(1.0f,-1.0f, 1.0f))
     );
 
-    //Triangle t = Triangle(vec3(0.0, 0.0, 4.0), vec3(0.0, 4.0, 4.5), vec3(2.5, 0.0, 4.0));
+    model_world_transform(model, cube);
 
     Light l = Light(vec3(0.0, 7.0, 0.0), 0.5);
 

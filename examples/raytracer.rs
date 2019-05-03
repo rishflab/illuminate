@@ -12,6 +12,7 @@
 extern crate env_logger;
 #[cfg(feature = "dx11")]
 extern crate gfx_backend_dx11 as back;
+
 #[cfg(feature = "dx12")]
 extern crate gfx_backend_dx12 as back;
 #[cfg(feature = "gl")]
@@ -61,16 +62,23 @@ fn main() {
     env_logger::init();
 
     let view = glm::look_at(
-        &glm::vec3(2.0,0.0,7.0), // Camera is at (4,3,3), in World Space
-        &glm::vec3(2.0,0.0,0.0), // and looks at the origin
+        &glm::vec3(0.0,0.0,7.0), // Camera is at (4,3,3), in World Space
+        &glm::vec3(0.0,0.0,0.0), // and looks at the origin
         &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
     );
 
     let view = glm::inverse(&view);
 
-    let numbers: Vec<f32> =  view.as_slice().to_vec();
+    println!("view mat: {:?}", view.data);
 
-    println!("view mat: {:?}", numbers);
+    let mut model = glm::translation(&glm::vec3(3.0, 3.0, 0.0));
+
+    let mut model_vec = model.as_slice().to_vec();
+
+    let mut buffer = view.data.to_vec().clone();
+    buffer.append(&mut model_vec);
+
+
     let stride = std::mem::size_of::<f32>() as u64;
 
     let mut events_loop = winit::EventsLoop::new();
@@ -137,6 +145,13 @@ fn main() {
                         stage_flags: pso::ShaderStageFlags::COMPUTE,
                         immutable_samplers: false,
                     },
+                    pso::DescriptorSetLayoutBinding {
+                        binding: 2,
+                        ty: pso::DescriptorType::StorageBuffer,
+                        count: 1,
+                        stage_flags: pso::ShaderStageFlags::COMPUTE,
+                        immutable_samplers: false,
+                    },
                 ],
                 &[],
             )
@@ -156,7 +171,7 @@ fn main() {
 
         let desc_pool = unsafe {
             device.create_descriptor_pool(
-                4,
+                12,
                 &[
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::StorageImage,
@@ -165,7 +180,10 @@ fn main() {
                     pso::DescriptorRangeDesc{
                         ty: pso::DescriptorType::StorageBuffer,
                         count: 4,
-
+                    },
+                    pso::DescriptorRangeDesc{
+                        ty: pso::DescriptorType::StorageBuffer,
+                        count: 4,
                     },
                 ],
             )
@@ -213,13 +231,13 @@ fn main() {
             m::Properties::DEVICE_LOCAL | m::Properties::CPU_VISIBLE | m::Properties::COHERENT,
             buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE,
             stride,
-            numbers.len() as u64,
+            (buffer.as_slice().len()) as u64,
         )
     };
 
     unsafe {
         let mut writer = device.acquire_mapping_writer::<f32>(&device_memory, 0..device_buffer_size).unwrap();
-        writer[0..numbers.len()].copy_from_slice(&numbers);
+        writer[0..buffer.as_slice().len()].copy_from_slice(buffer.as_slice());
         device.release_mapping_writer(writer).expect("Can't relase mapping writer");
     }
 
@@ -258,6 +276,15 @@ fn main() {
                         pso::DescriptorSetWrite {
                             set: &desc_set,
                             binding: 1,
+                            array_offset: 0,
+                            descriptors: Some(pso::Descriptor::Buffer(&device_buffer, None .. None)),
+                        }
+                    ));
+
+                    device.write_descriptor_sets(Some(
+                        pso::DescriptorSetWrite {
+                            set: &desc_set,
+                            binding: 2,
                             array_offset: 0,
                             descriptors: Some(pso::Descriptor::Buffer(&device_buffer, None .. None)),
                         }
