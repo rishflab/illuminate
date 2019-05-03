@@ -92,7 +92,7 @@ float mollerTrumboreIntersectTriangle(vec3 orig, vec3 dir, vec3 v0, vec3 v1, vec
 
 void model_world_transform(mat4 transform, inout Triangle[12] mesh){
 
-    for(int i=0; i<12; i++){
+    for(int i=0; i<2; i++){
         Triangle old = mesh[i];
         Triangle new = Triangle(vec3(1.0), vec3(1.0), vec3(1.0));
         new.v0 = (transform * vec4(old.v0, 1.0)).xyz;
@@ -125,8 +125,8 @@ void main() {
 
     Ray ray = Ray(cam_origin, ray_direction);
 
-    int num = 12;
-    Triangle cube[12] = Triangle[12](
+    const int num = 12;
+    Triangle cube[num] = Triangle[num](
         Triangle(vec3(-1.0f,-1.0f,-1.0f), vec3(-1.0f,-1.0f, 1.0f), vec3(-1.0f, 1.0f, 1.0f)),
         Triangle(vec3(1.0f, 1.0f,-1.0f), vec3(-1.0f,-1.0f,-1.0f), vec3(-1.0f, 1.0f,-1.0f)),
         Triangle(vec3(1.0f,-1.0f, 1.0f), vec3(-1.0f,-1.0f,-1.0f), vec3(1.0f,-1.0f,-1.0f)),
@@ -143,7 +143,7 @@ void main() {
 
     model_world_transform(model, cube);
 
-    Light l = Light(vec3(0.0, 7.0, 0.0), 0.5);
+    Light l = Light(vec3(0.0, 6.0, 3.0), 0.5);
 
     vec4 to_write = vec4(0.0);
 
@@ -165,7 +165,19 @@ void main() {
             vec3 edge2 = t.v2 - t.v0;
             vec3 surface_normal = cross(edge2, edge1);
 
-            float shade = dot(light_direction, surface_normal) * 30.0 * (1 / (light_distance * light_distance));
+            vec3 P = cross(light_direction, edge2);
+            //P = normalize(P);
+            // if determinant is near zero, ray lies in plane of triangle
+            float det = dot(edge1, P);
+
+            float shade = 0.0;
+
+            if (det < EPSILON ) {
+
+                //shade = dot(light_direction, surface_normal) * 30.0 * (1 / (light_distance * light_distance));
+
+                shade = -1.0 * det * 10.0 * (1 / (light_distance * light_distance));
+            }
 
             //float shade = 0.5;
 

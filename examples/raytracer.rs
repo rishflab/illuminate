@@ -62,7 +62,7 @@ fn main() {
     env_logger::init();
 
     let view = glm::look_at(
-        &glm::vec3(0.0,0.0,7.0), // Camera is at (4,3,3), in World Space
+        &glm::vec3(1.0,2.0,7.0), // Camera is at (4,3,3), in World Space
         &glm::vec3(0.0,0.0,0.0), // and looks at the origin
         &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
     );
@@ -71,7 +71,7 @@ fn main() {
 
     println!("view mat: {:?}", view.data);
 
-    let mut model = glm::translation(&glm::vec3(3.0, 3.0, 0.0));
+    let mut model = glm::translation(&glm::vec3(0.0, 3.0, 0.0));
 
     let mut model_vec = model.as_slice().to_vec();
 
