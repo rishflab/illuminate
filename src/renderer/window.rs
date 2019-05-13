@@ -1,44 +1,28 @@
-use winit::{
-    dpi::LogicalSize, CreationError, Event, EventsLoop, Window, WindowBuilder, WindowEvent,
-};
+use gfx_hal::window::Extent2D;
 
-#[derive(Debug)]
-pub struct WinitState {
-    pub events_loop: EventsLoop,
-    pub window: Window,
+pub const DIMS: Extent2D = Extent2D { width: 800, height: 800};
+
+use std::string::ToString;
+use winit;
+
+pub struct WindowState {
+    pub events_loop: winit::EventsLoop,
+    pub wb: Option<winit::WindowBuilder>,
 }
 
-impl WinitState {
-    /// Constructs a new `EventsLoop` and `Window` pair.
-    ///
-    /// The specified title and size are used, other elements are default.
-    /// ## Failure
-    /// It's possible for the window creation to fail. This is unlikely.
-    pub fn new<T: Into<String>>(title: T, size: LogicalSize) -> Result<Self, CreationError> {
-        let events_loop = EventsLoop::new();
-        let output = WindowBuilder::new()
-            .with_title(title)
-            .with_dimensions(size)
-            .build(&events_loop);
-        output.map(|window| Self {
+impl WindowState {
+    pub fn new() -> WindowState {
+        let events_loop = winit::EventsLoop::new();
+
+        let wb = winit::WindowBuilder::new()
+            .with_dimensions(winit::dpi::LogicalSize::new(
+                DIMS.width as _,
+                DIMS.height as _,
+            )).with_title("raytracer".to_string());
+
+        WindowState {
             events_loop,
-            window,
-        })
-    }
-}
-
-impl Default for WinitState {
-    /// Makes an 800x600 window with the `WINDOW_NAME` value as the title.
-    /// ## Panics
-    /// If a `CreationError` occurs.
-    fn default() -> Self {
-        Self::new(
-            super::WINDOW_NAME,
-            LogicalSize {
-                width: 800.0,
-                height: 600.0,
-            },
-        )
-            .expect("Could not create a window!")
+            wb: Some(wb),
+        }
     }
 }

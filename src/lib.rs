@@ -14,5 +14,5 @@
 //pub mod network;
 //pub mod systems;
 //pub mod components;
-//pub mod renderer;
+pub mod renderer;
 //pub mod input;

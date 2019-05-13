@@ -1,12 +1,12 @@
 #![cfg_attr(
-    not(any(
-        feature = "vulkan",
-        feature = "dx11",
-        feature = "dx12",
-        feature = "metal",
-        feature = "gl"
-    )),
-    allow(dead_code, unused_extern_crates, unused_imports)
+not(any(
+feature = "vulkan",
+feature = "dx11",
+feature = "dx12",
+feature = "metal",
+feature = "gl"
+)),
+allow(dead_code, unused_extern_crates, unused_imports)
 )]
 
 extern crate env_logger;
@@ -52,11 +52,11 @@ const COLOR_RANGE: i::SubresourceRange = i::SubresourceRange {
 };
 
 #[cfg(any(
-    feature = "vulkan",
-    feature = "dx11",
-    feature = "dx12",
-    feature = "metal",
-    feature = "gl"
+feature = "vulkan",
+feature = "dx11",
+feature = "dx12",
+feature = "metal",
+feature = "gl"
 ))]
 fn main() {
     env_logger::init();
@@ -297,13 +297,13 @@ fn main() {
         events_loop.poll_events(|event| {
             if let winit::Event::WindowEvent { event, .. } = event {
                 #[allow(unused_variables)]
-                match event {
+                    match event {
                     winit::WindowEvent::KeyboardInput {
                         input:
-                            winit::KeyboardInput {
-                                virtual_keycode: Some(winit::VirtualKeyCode::Escape),
-                                ..
-                            },
+                        winit::KeyboardInput {
+                            virtual_keycode: Some(winit::VirtualKeyCode::Escape),
+                            ..
+                        },
                         ..
                     }
                     | winit::WindowEvent::CloseRequested => running = false,
@@ -400,11 +400,11 @@ unsafe fn create_buffer<B: Backend>(
 }
 
 #[cfg(not(any(
-    feature = "vulkan",
-    feature = "dx11",
-    feature = "dx12",
-    feature = "metal",
-    feature = "gl"
+feature = "vulkan",
+feature = "dx11",
+feature = "dx12",
+feature = "metal",
+feature = "gl"
 )))]
 fn main() {
     println!("You need to enable the native API feature (vulkan/metal) in order to test the LL");
