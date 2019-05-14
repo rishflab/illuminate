@@ -23,11 +23,15 @@ impl<B: Backend> PipelineState<B> {
     {
         let device = &device_ptr.borrow().device;
 
+//        let pipeline_layout = device
+//            .create_pipeline_layout(desc_layouts, &[(pso::ShaderStageFlags::COMPUTE, 0..8)])
+//            .expect("Can't create pipeline layout");
+
         let pipeline_layout = device
-            .create_pipeline_layout(desc_layouts, &[(pso::ShaderStageFlags::COMPUTE, 0..8)])
+            .create_pipeline_layout(desc_layouts, &[])
             .expect("Can't create pipeline layout");
 
-        let comp_module = {
+        let shader = {
             let glsl = fs::read_to_string("shaders/raytracer.comp").unwrap();
             let spirv: Vec<u8> = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute)
                 .unwrap()
@@ -40,7 +44,7 @@ impl<B: Backend> PipelineState<B> {
         let pipeline = {
             let comp_entry = pso::EntryPoint::<B> {
                 entry: crate::renderer::ENTRY_NAME,
-                module: &comp_module,
+                module: &shader,
                 specialization: pso::Specialization::default(),
             };
 

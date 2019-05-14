@@ -7,12 +7,10 @@ use super::window::WindowState;
 pub struct BackendState<B: Backend> {
     pub surface: B::Surface,
     pub adapter: AdapterState<B>,
-//    #[cfg(any(feature = "vulkan", feature = "dx11", feature = "dx12", feature = "metal"))]
-//    #[allow(dead_code)]
+
     pub window: winit::Window,
 }
 
-//#[cfg(any(feature = "vulkan", feature = "dx11", feature = "dx12", feature = "metal"))]
 pub fn create_backend(window_state: &mut WindowState) -> (BackendState<back::Backend>, back::Instance) {
     let window = window_state
         .wb

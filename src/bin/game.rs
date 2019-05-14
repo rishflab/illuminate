@@ -11,4 +11,6 @@ fn main() {
     let (backend, _instance) = create_backend(&mut window);
 
     let mut renderer_state = unsafe { RendererState::new(backend, window) };
+
+    renderer_state.mainloop();
 }

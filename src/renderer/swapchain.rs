@@ -1,4 +1,4 @@
-use gfx_hal::{Backend, Device, Surface, SwapchainConfig, image, format, format::ChannelType};
+use gfx_hal::{Backend, Device, Surface, SwapchainConfig, image as i, format, format::ChannelType};
 use super::device::DeviceState;
 use super::backend::BackendState;
 use super::window::DIMS;
@@ -10,7 +10,7 @@ pub struct SwapchainState<B: Backend> {
     pub swapchain: Option<B::Swapchain>,
     pub backbuffer: Option<Vec<B::Image>>,
     pub device: Rc<RefCell<DeviceState<B>>>,
-    pub extent: image::Extent,
+    pub extent: i::Extent,
     pub format: format::Format,
 }
 
@@ -30,7 +30,10 @@ impl<B: Backend> SwapchainState<B> {
         });
 
         println!("Surface format: {:?}", format);
-        let swap_config = SwapchainConfig::from_caps(&caps, format, DIMS);
+        let mut swap_config = SwapchainConfig::from_caps(&caps, format, DIMS);
+
+        swap_config.present_mode = gfx_hal::PresentMode::Immediate;
+        swap_config.image_usage = i::Usage::STORAGE | i::Usage::COLOR_ATTACHMENT ;
 
         println!("Swap Config: {:?}", swap_config);
         let extent = swap_config.extent.to_extent();
