@@ -1,25 +1,3 @@
-#![cfg_attr(
-not(any(
-feature = "vulkan",
-feature = "dx11",
-feature = "dx12",
-feature = "metal",
-feature = "gl"
-)),
-allow(dead_code, unused_extern_crates, unused_imports)
-)]
-
-extern crate env_logger;
-#[cfg(feature = "dx11")]
-extern crate gfx_backend_dx11 as back;
-
-#[cfg(feature = "dx12")]
-extern crate gfx_backend_dx12 as back;
-#[cfg(feature = "gl")]
-extern crate gfx_backend_gl as back;
-#[cfg(feature = "metal")]
-extern crate gfx_backend_metal as back;
-#[cfg(feature = "vulkan")]
 extern crate gfx_backend_vulkan as back;
 extern crate gfx_hal as hal;
 
@@ -33,7 +11,7 @@ use hal::pass::Subpass;
 use hal::pso::{PipelineStage, ShaderStageFlags};
 use hal::queue::Submission;
 use hal::{buffer, command, format as f, image as i, memory as m, pass, pool, pso, window::Extent2D, PresentMode};
-use hal::{Backend, Backbuffer, QueueFamily, DescriptorPool, FrameSync, Primitive, SwapchainConfig,};
+use hal::{Backend, QueueFamily, DescriptorPool, Primitive, SwapchainConfig,};
 use hal::{Compute, Device, Instance, PhysicalDevice, Surface, Swapchain};
 
 use std::fs;
@@ -51,13 +29,6 @@ const COLOR_RANGE: i::SubresourceRange = i::SubresourceRange {
     layers: 0..1,
 };
 
-#[cfg(any(
-feature = "vulkan",
-feature = "dx11",
-feature = "dx12",
-feature = "metal",
-feature = "gl"
-))]
 fn main() {
     env_logger::init();
 
@@ -71,9 +42,7 @@ fn main() {
 
     println!("view mat: {:?}", view.data);
 
-
     let mut buffer = view.data.to_vec().clone();
-
 
     let mut model = glm::translation(&glm::vec3(0.0, 0.0, 0.0));
 
@@ -166,17 +135,18 @@ fn main() {
 
         let desc_pool = unsafe {
             device.create_descriptor_pool(
-                8,
+                2,
                 &[
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::StorageImage,
-                        count: 4,
+                        count: 2,
                     },
                     pso::DescriptorRangeDesc{
                         ty: pso::DescriptorType::StorageBuffer,
-                        count: 4,
+                        count: 2,
                     },
                 ],
+                pso::DescriptorPoolCreateFlags::empty(),
             )
         }.expect("Can't create descriptor pool");
 
@@ -187,7 +157,7 @@ fn main() {
     let mut frame_semaphore = device.create_semaphore().expect("Can't create semaphore");
     let mut frame_fence = device.create_fence(false).expect("Can't create fence"); // TODO: remove
 
-    let (caps, formats, _present_modes, _composite_alphas) =
+    let (caps, formats, _present_modes) =
         surface.compatibility(&mut adapter.physical_device);
     println!("formats: {:?}", formats);
     println!("formats: {:?}", caps);
@@ -225,73 +195,80 @@ fn main() {
     };
 
 
+    let frame_images = backbuffer
+        .into_iter()
+        .map(|image| unsafe {
 
-    // Create The ImageViews
-    let mut frame_images = match backbuffer {
-        Backbuffer::Images(images) => {
-            images
-                .into_iter()
-                .map(|image| unsafe {
+            //println!("img: {:?}", image);
+            let rtv = device
+                .create_image_view(
+                    &image,
+                    i::ViewKind::D2,
+                    format,
+                    Swizzle::NO,
+                    COLOR_RANGE.clone(),
+                ).unwrap();
 
-                    //println!("img: {:?}", image);
-                    let rtv = device
-                        .create_image_view(
-                            &image,
-                            i::ViewKind::D2,
-                            format,
-                            Swizzle::NO,
-                            COLOR_RANGE.clone(),
-                        ).unwrap();
+            println!("img_view: {:?}", rtv);
 
-                    println!("img_view: {:?}", rtv);
+            let desc_set = desc_pool.allocate_set(&set_layout).unwrap();
 
-                    let desc_set = desc_pool.allocate_set(&set_layout).unwrap();
+            device.write_descriptor_sets(Some(
+                pso::DescriptorSetWrite {
+                    set: &desc_set,
+                    binding: 0,
+                    array_offset: 0,
+                    descriptors: Some(pso::Descriptor::Image(&rtv, i::Layout::Present)),
+                }
+            ));
 
-                    device.write_descriptor_sets(Some(
-                        pso::DescriptorSetWrite {
-                            set: &desc_set,
-                            binding: 0,
-                            array_offset: 0,
-                            descriptors: Some(pso::Descriptor::Image(&rtv, i::Layout::Present)),
-                        }
-                    ));
+            device.write_descriptor_sets(Some(
+                pso::DescriptorSetWrite {
+                    set: &desc_set,
+                    binding: 1,
+                    array_offset: 0,
+                    descriptors: Some(pso::Descriptor::Buffer(&device_buffer, None .. None)),
+                }
+            ));
 
-                    device.write_descriptor_sets(Some(
-                        pso::DescriptorSetWrite {
-                            set: &desc_set,
-                            binding: 1,
-                            array_offset: 0,
-                            descriptors: Some(pso::Descriptor::Buffer(&device_buffer, None .. None)),
-                        }
-                    ));
+            (image, rtv, desc_set)
+        }).collect::<Vec<_>>();
 
-                    (image, rtv, desc_set)
-                }).collect::<Vec<_>>()
-        }
-        Backbuffer::Framebuffer(_) => unimplemented!("couldnt create image views"),
-    };
+
 
     let mut running = true;
 
     let mut x = 0.0;
 
+    let mut model = glm::translation(&glm::vec3(x, 0.0, 0.0));
+
+    let mut model_vec = model.as_slice().to_vec();
+    let mut buffer = view.data.to_vec().clone();
+    buffer.append(&mut model_vec);
+
+    unsafe {
+        let mut writer = device.acquire_mapping_writer::<f32>(&device_memory, 0..device_buffer_size).unwrap();
+        writer[0..buffer.as_slice().len()].copy_from_slice(buffer.as_slice());
+        device.release_mapping_writer(writer).expect("Can't relase mapping writer");
+    }
+
     while running {
 
 
 
-        x += 0.001;
-
-        let mut model = glm::translation(&glm::vec3(x, 0.0, 0.0));
-
-        let mut model_vec = model.as_slice().to_vec();
-        let mut buffer = view.data.to_vec().clone();
-        buffer.append(&mut model_vec);
-
-        unsafe {
-            let mut writer = device.acquire_mapping_writer::<f32>(&device_memory, 0..device_buffer_size).unwrap();
-            writer[0..buffer.as_slice().len()].copy_from_slice(buffer.as_slice());
-            device.release_mapping_writer(writer).expect("Can't relase mapping writer");
-        }
+//        x += 0.001;
+//
+//        let mut model = glm::translation(&glm::vec3(x, 0.0, 0.0));
+//
+//        let mut model_vec = model.as_slice().to_vec();
+//        let mut buffer = view.data.to_vec().clone();
+//        buffer.append(&mut model_vec);
+//
+//        unsafe {
+//            let mut writer = device.acquire_mapping_writer::<f32>(&device_memory, 0..device_buffer_size).unwrap();
+//            writer[0..buffer.as_slice().len()].copy_from_slice(buffer.as_slice());
+//            device.release_mapping_writer(writer).expect("Can't relase mapping writer");
+//        }
 
 
         events_loop.poll_events(|event| {
@@ -315,8 +292,8 @@ fn main() {
         let frame: hal::SwapImageIndex = unsafe {
             device.reset_fence(&frame_fence).unwrap();
             command_pool.reset();
-            match swap_chain.acquire_image(!0, FrameSync::Semaphore(&mut frame_semaphore)) {
-                Ok(i) => i,
+            match swap_chain.acquire_image(!0, Some(&frame_semaphore), None) {
+                Ok((i, _)) => i,
                 Err(_) => {
                     panic!();
                 }
@@ -397,15 +374,4 @@ unsafe fn create_buffer<B: Backend>(
     device.bind_buffer_memory(&memory, 0, &mut buffer).unwrap();
 
     (memory, buffer, requirements.size)
-}
-
-#[cfg(not(any(
-feature = "vulkan",
-feature = "dx11",
-feature = "dx12",
-feature = "metal",
-feature = "gl"
-)))]
-fn main() {
-    println!("You need to enable the native API feature (vulkan/metal) in order to test the LL");
 }

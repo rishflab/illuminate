@@ -23,10 +23,6 @@ impl<B: Backend> PipelineState<B> {
     {
         let device = &device_ptr.borrow().device;
 
-//        let pipeline_layout = device
-//            .create_pipeline_layout(desc_layouts, &[(pso::ShaderStageFlags::COMPUTE, 0..8)])
-//            .expect("Can't create pipeline layout");
-
         let pipeline_layout = device
             .create_pipeline_layout(desc_layouts, &[])
             .expect("Can't create pipeline layout");

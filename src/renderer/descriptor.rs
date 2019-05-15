@@ -1,6 +1,5 @@
 use gfx_hal::{Device, Backend, DescriptorPool, pso};
 
-
 use super::device::DeviceState;
 
 use std::cell::RefCell;
@@ -10,10 +9,6 @@ use std::rc::Rc;
 pub struct DescriptorState<B: Backend> {
     pub descriptor_sets: Vec<B::DescriptorSet>,
 }
-
-//impl<B: Backend> DescriptorState<B> {
-//
-//}
 
 pub struct DescSetLayout<B: Backend> {
     pub layout: Option<B::DescriptorSetLayout>,
@@ -40,7 +35,7 @@ impl<B: Backend> DescSetLayout<B> {
         }
     }
 
-    pub unsafe fn create_desc_set(self, desc_pool: &mut B::DescriptorPool) -> DescSet<B> {
+    pub unsafe fn create_desc_set(&self, desc_pool: &mut B::DescriptorPool) -> DescSet<B> {
         let desc_set = desc_pool
             .allocate_set(self.layout.as_ref().unwrap())
             .unwrap();
@@ -70,9 +65,9 @@ pub struct DescSet<B: Backend> {
 }
 
 pub struct DescSetWrite<W> {
-    binding: pso::DescriptorBinding,
-    array_offset: pso::DescriptorArrayIndex,
-    descriptors: W,
+    pub binding: pso::DescriptorBinding,
+    pub array_offset: pso::DescriptorArrayIndex,
+    pub descriptors: W,
 }
 
 impl<B: Backend> DescSet<B> {

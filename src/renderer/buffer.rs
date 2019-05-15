@@ -34,6 +34,8 @@ impl<B: Backend> BufferState<B> {
         let stride = size_of::<T>() as u64;
         let upload_size = data_source.len() as u64 * stride;
 
+        println!("upload size: {:?}", upload_size);
+
         {
             let device = &device_ptr.borrow().device;
 
@@ -50,7 +52,7 @@ impl<B: Backend> BufferState<B> {
                 .enumerate()
                 .position(|(id, mem_type)| {
                     mem_req.type_mask & (1 << id) != 0
-                        && mem_type.properties.contains(m::Properties::CPU_VISIBLE)
+                        && mem_type.properties.contains(m::Properties::DEVICE_LOCAL | m::Properties::CPU_VISIBLE | m::Properties::COHERENT)
                 })
                 .unwrap()
                 .into();
@@ -67,8 +69,10 @@ impl<B: Backend> BufferState<B> {
                 data_target[0..data_source.len()].copy_from_slice(data_source);
                 device.release_mapping_writer(data_target).unwrap();
             }
+
         }
 
+        println!("memory written");
         BufferState {
             memory: Some(memory),
             buffer: Some(buffer),

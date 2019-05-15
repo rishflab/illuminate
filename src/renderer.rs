@@ -10,6 +10,9 @@ pub mod pipeline;
 pub mod buffer;
 pub mod descriptor;
 pub mod framebuffer;
+pub mod uniform;
+
+extern crate nalgebra_glm as glm;
 
 use self::window::WindowState;
 use self::backend::BackendState;
@@ -18,6 +21,7 @@ use self::swapchain::SwapchainState;
 use self::pipeline::PipelineState;
 use self::descriptor::DescSetLayout;
 use self::framebuffer::FramebufferState;
+use self::uniform::Uniform;
 
 
 use gfx_hal::{Backend, buffer::Usage, format, image, CommandPool};
@@ -52,6 +56,7 @@ pub struct RendererState<B: Backend> {
     pub pipeline: PipelineState<B>,
     pub framebuffer: FramebufferState<B>,
     pub descriptor: DescriptorState<B>,
+    pub uniform: Vec<Uniform<B>>,
 }
 
 impl<B: Backend> RendererState<B> {
@@ -66,7 +71,8 @@ impl<B: Backend> RendererState<B> {
         )));
 
 
-        let (desc_layout, pipeline) = {
+        let (desc_layout, uniform_desc_layout) = {
+
             let mut desc_layout = DescSetLayout::new(
                 Rc::clone(&device),
                 vec![
@@ -79,11 +85,20 @@ impl<B: Backend> RendererState<B> {
                     },
                 ],
             );
-            let pipeline = PipelineState::new(
-                vec![desc_layout.get_layout()],
+
+            let uniform_desc = DescSetLayout::new(
                 Rc::clone(&device),
+                vec![pso::DescriptorSetLayoutBinding {
+                    binding: 0,
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: 1,
+                    stage_flags: pso::ShaderStageFlags::COMPUTE,
+                    immutable_samplers: false,
+                }],
             );
-            (desc_layout, pipeline)
+
+
+            (desc_layout, uniform_desc)
         };
 
 
@@ -91,10 +106,14 @@ impl<B: Backend> RendererState<B> {
             .borrow()
             .device
             .create_descriptor_pool(
-                2, // # of sets
+                4, // # of sets
                 &[
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::StorageImage,
+                        count: 2,
+                    },
+                    pso::DescriptorRangeDesc {
+                        ty: pso::DescriptorType::UniformBuffer,
                         count: 2,
                     },
                 ],
@@ -103,6 +122,19 @@ impl<B: Backend> RendererState<B> {
             .expect("Could not create descriptor pool");
 
         println!("created desc pool");
+
+//        let mut uniform_desc_pool = device
+//            .borrow()
+//            .device
+//            .create_descriptor_pool(
+//                2, // # of sets
+//                &[pso::DescriptorRangeDesc {
+//                    ty: pso::DescriptorType::UniformBuffer,
+//                    count: 2,
+//                }],
+//                pso::DescriptorPoolCreateFlags::empty(),
+//            )
+//            .ok();
 
 
         let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
@@ -115,12 +147,65 @@ impl<B: Backend> RendererState<B> {
             &mut swapchain,
         );
 
-        let descriptor = DescriptorState{
-            descriptor_sets: framebuffer.write_descriptor_sets(Rc::clone(&device), desc_layout.get_layout(), desc_pool),
+        println!("created framebuffer");
+
+        let (descriptor, uniform_desc) = {
+            let descriptor = DescriptorState {
+                descriptor_sets: framebuffer.write_descriptor_sets(Rc::clone(&device), desc_layout.get_layout(), &mut desc_pool),
+            };
+
+            let uniform_desc = (0..2).map(|_|{
+                let desc = uniform_desc_layout.create_desc_set(&mut desc_pool);
+                desc
+            }).collect::<Vec<_>>();
+
+            (descriptor, uniform_desc)
         };
 
+        let pipeline = PipelineState::new(
+            vec![desc_layout.get_layout(), uniform_desc_layout.get_layout()],
+            Rc::clone(&device),
+        );
 
-        println!("created framebuffer");
+
+        let view = glm::look_at(
+            &glm::vec3(1.0,2.0,7.0), // Camera is at (4,3,3), in World Space
+            &glm::vec3(0.0,0.0,0.0), // and looks at the origin
+            &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
+        );
+
+        let view = glm::inverse(&view);
+
+        let view_vec: Vec<f32> = view.data.to_vec();
+        let mut data = view_vec.clone();
+
+        let mut model = glm::translation(&glm::vec3(0.0, 0.0, 0.0));
+
+        let mut model_vec: Vec<f32> = model.as_slice().to_vec();
+
+        data.append(&mut model_vec);
+
+        let mut color = glm::vec4(0.0, 0.0, 0.0, 0.0);
+
+        let mut color_vec: Vec<f32> = color.as_slice().to_vec();
+
+        data.append(&mut color_vec);
+
+        println!("view mat: {:?}", data);
+
+        println!("Memory types: {:?}", backend.adapter.memory_types);
+
+        let uniforms = uniform_desc.into_iter().map(|d|{
+
+            let uniform = Uniform::new(
+                Rc::clone(&device),
+                &backend.adapter.memory_types,
+                &data,
+                d,
+                0,
+            );
+            uniform
+        }).collect::<Vec<_>>();
 
 
         RendererState{
@@ -131,6 +216,7 @@ impl<B: Backend> RendererState<B> {
             pipeline: pipeline,
             framebuffer: framebuffer,
             descriptor: descriptor,
+            uniform: uniforms,
         }
 
     }
@@ -191,6 +277,8 @@ impl<B: Backend> RendererState<B> {
                 let (framebuffer_fence, command_pool) = fid.unwrap();
                 let (image_acquired, image_present) = sid.unwrap();
 
+                //println!("{:?}", image_acquired);
+
                 unsafe {
                     self.device
                         .borrow()
@@ -210,7 +298,16 @@ impl<B: Backend> RendererState<B> {
 
                     cmd_buffer.begin();
                     cmd_buffer.bind_compute_pipeline(self.pipeline.pipeline.as_ref().unwrap());
-                    cmd_buffer.bind_compute_descriptor_sets(self.pipeline.pipeline_layout.as_ref().unwrap(), 0, Some(&self.descriptor.descriptor_sets[frame as usize]), &[]);
+                    cmd_buffer.bind_compute_descriptor_sets(
+                        self.pipeline.pipeline_layout.as_ref().unwrap(),
+                        0,
+                        vec!(
+                            &self.descriptor.descriptor_sets[frame as usize],
+                            self.uniform[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
+
+                        ),
+                        &[]
+                    );
                     cmd_buffer.dispatch([800, 800, 1]);
                     cmd_buffer.finish();
 

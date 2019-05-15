@@ -99,7 +99,7 @@ impl<B: Backend> FramebufferState<B> {
         &mut self,
         device: Rc<RefCell<DeviceState<B>>>,
         desc_layout: &B::DescriptorSetLayout,
-        mut desc_pool: B::DescriptorPool,
+        desc_pool: &mut B::DescriptorPool,
     ) -> Vec<B::DescriptorSet> {
 
 
