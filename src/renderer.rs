@@ -123,20 +123,6 @@ impl<B: Backend> RendererState<B> {
 
         println!("created desc pool");
 
-//        let mut uniform_desc_pool = device
-//            .borrow()
-//            .device
-//            .create_descriptor_pool(
-//                2, // # of sets
-//                &[pso::DescriptorRangeDesc {
-//                    ty: pso::DescriptorType::UniformBuffer,
-//                    count: 2,
-//                }],
-//                pso::DescriptorPoolCreateFlags::empty(),
-//            )
-//            .ok();
-
-
         let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
 
         println!("created swap chain");
@@ -221,126 +207,101 @@ impl<B: Backend> RendererState<B> {
 
     }
 
-    pub fn mainloop(&mut self) {
+    pub fn render(&mut self) {
+        let sem_index = self.framebuffer.next_acq_pre_pair_index();
 
-        let mut running = true;
+        let frame: gfx_hal::SwapImageIndex = unsafe {
+            let (acquire_semaphore, _) = self
+                .framebuffer
+                .get_frame_data(None, Some(sem_index))
+                .1
+                .unwrap();
 
-        while running {
-            {
-                self.window.events_loop.poll_events(|event| {
-                    if let winit::Event::WindowEvent { event, .. } = event {
-                        #[allow(unused_variables)]
-                            match event {
-                            winit::WindowEvent::KeyboardInput {
-                                input:
-                                winit::KeyboardInput {
-                                    virtual_keycode: Some(winit::VirtualKeyCode::Escape),
-                                    ..
-                                },
-                                ..
-                            }
-                            | winit::WindowEvent::CloseRequested => running = false,
-                            _ => (),
-                        }
-                    }
-                });
-
-                let sem_index = self.framebuffer.next_acq_pre_pair_index();
-
-                let frame: gfx_hal::SwapImageIndex = unsafe {
-                    let (acquire_semaphore, _) = self
-                        .framebuffer
-                        .get_frame_data(None, Some(sem_index))
-                        .1
-                        .unwrap();
-
-                    match self
-                        .swapchain
-                        .as_mut()
-                        .unwrap()
-                        .swapchain
-                        .as_mut()
-                        .unwrap()
-                        .acquire_image(!0, Some(acquire_semaphore), None)
-                        {
-                            Ok((i, _)) => i,
-                            Err(_) => {
-                                continue
-                            }
-                        }
-                };
-
-                let (fid, sid) = self
-                    .framebuffer
-                    .get_frame_data(Some(frame as usize), Some(sem_index));
-
-                let (framebuffer_fence, command_pool) = fid.unwrap();
-                let (image_acquired, image_present) = sid.unwrap();
-
-                //println!("{:?}", image_acquired);
-
-                unsafe {
-                    self.device
-                        .borrow()
-                        .device
-                        .wait_for_fence(framebuffer_fence, !0)
-                        .unwrap();
-                    self.device
-                        .borrow()
-                        .device
-                        .reset_fence(framebuffer_fence)
-                        .unwrap();
-
-                    command_pool.reset();
-
-
-                    let mut cmd_buffer = command_pool.acquire_command_buffer::<command::OneShot>();
-
-                    cmd_buffer.begin();
-                    cmd_buffer.bind_compute_pipeline(self.pipeline.pipeline.as_ref().unwrap());
-                    cmd_buffer.bind_compute_descriptor_sets(
-                        self.pipeline.pipeline_layout.as_ref().unwrap(),
-                        0,
-                        vec!(
-                            &self.descriptor.descriptor_sets[frame as usize],
-                            self.uniform[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
-
-                        ),
-                        &[]
-                    );
-                    cmd_buffer.dispatch([800, 800, 1]);
-                    cmd_buffer.finish();
-
-
-                    let submission = Submission {
-                        command_buffers: iter::once(&cmd_buffer),
-                        wait_semaphores: iter::once((&*image_acquired, pso::PipelineStage::BOTTOM_OF_PIPE)),
-                        signal_semaphores: iter::once(&*image_present),
-                    };
-
-                    self.device.borrow_mut().queues.queues[0]
-                        .submit(submission, Some(framebuffer_fence));
-
-                    // present frame
-                    if let Err(_) = self
-                        .swapchain
-                        .as_ref()
-                        .unwrap()
-                        .swapchain
-                        .as_ref()
-                        .unwrap()
-                        .present(
-                            &mut self.device.borrow_mut().queues.queues[0],
-                            frame,
-                            Some(&*image_present),
-                        )
-                    {
-                        continue;
+            match self
+                .swapchain
+                .as_mut()
+                .unwrap()
+                .swapchain
+                .as_mut()
+                .unwrap()
+                .acquire_image(!0, Some(acquire_semaphore), None)
+                {
+                    Ok((i, _)) => i,
+                    Err(_) => {
+                        panic!("couldnt acquire swapchain image")
                     }
                 }
+        };
+
+        let (fid, sid) = self
+            .framebuffer
+            .get_frame_data(Some(frame as usize), Some(sem_index));
+
+        let (framebuffer_fence, command_pool) = fid.unwrap();
+        let (image_acquired, image_present) = sid.unwrap();
+
+        //println!("{:?}", image_acquired);
+
+        unsafe {
+            self.device
+                .borrow()
+                .device
+                .wait_for_fence(framebuffer_fence, !0)
+                .unwrap();
+            self.device
+                .borrow()
+                .device
+                .reset_fence(framebuffer_fence)
+                .unwrap();
+
+            command_pool.reset();
 
 
+            let mut cmd_buffer = command_pool.acquire_command_buffer::<command::OneShot>();
+
+            cmd_buffer.begin();
+            cmd_buffer.bind_compute_pipeline(self.pipeline.pipeline.as_ref().unwrap());
+            cmd_buffer.bind_compute_descriptor_sets(
+                self.pipeline.pipeline_layout.as_ref().unwrap(),
+                0,
+                vec!(
+                    &self.descriptor.descriptor_sets[frame as usize],
+                    self.uniform[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
+                ),
+                &[]
+            );
+            cmd_buffer.dispatch([800, 800, 1]);
+            cmd_buffer.finish();
+
+
+            let submission = Submission {
+                command_buffers: iter::once(&cmd_buffer),
+                wait_semaphores: iter::once((&*image_acquired, pso::PipelineStage::BOTTOM_OF_PIPE)),
+                signal_semaphores: iter::once(&*image_present),
+            };
+
+            self.device.borrow_mut().queues.queues[0]
+                .submit(submission, Some(framebuffer_fence));
+
+            // present frame
+            if let Err(_) = self
+                .swapchain
+                .as_ref()
+                .unwrap()
+                .swapchain
+                .as_ref()
+                .unwrap()
+                .present(
+                    &mut self.device.borrow_mut().queues.queues[0],
+                    frame,
+                    Some(&*image_present),
+                )
+            {
+                panic!("couldnt present swapchain image")
             }
         }
     }
+
+
+
 }

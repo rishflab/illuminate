@@ -2,6 +2,7 @@ extern crate gfx_backend_vulkan as back;
 
 use gfx_hal::{Adapter, Limits, Instance, MemoryType, Backend, PhysicalDevice};
 use super::window::WindowState;
+use crate::input::InputState;
 
 
 pub struct BackendState<B: Backend> {
@@ -11,12 +12,12 @@ pub struct BackendState<B: Backend> {
     pub window: winit::Window,
 }
 
-pub fn create_backend(window_state: &mut WindowState) -> (BackendState<back::Backend>, back::Instance) {
+pub fn create_backend(window_state: &mut WindowState, input_state: &mut InputState) -> (BackendState<back::Backend>, back::Instance) {
     let window = window_state
         .wb
         .take()
         .unwrap()
-        .build(&window_state.events_loop)
+        .build(&input_state.events_loop)
         .unwrap();
     let instance = back::Instance::create("gfx-rs quad", 1);
     let surface = instance.create_surface(&window);

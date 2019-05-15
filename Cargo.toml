@@ -20,9 +20,8 @@ env_logger = "0.6"
 image = "0.21"
 log = "0.4"
 winit = "0.19"
+#gilrs = "0.7.1"
 glsl-to-spirv = "0.1.4"
-#gfx-hal =  {git = "https://github.com/rishflab/gfx.git" , branch = "raytracer"}
-#gfx-backend-vulkan =  {git = "https://github.com/rishflab/gfx.git" , branch = "raytracer"}
 gfx-hal = "0.2.0"
 gfx-backend-vulkan = "0.2.0"
 

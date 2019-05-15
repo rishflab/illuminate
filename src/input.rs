@@ -1,38 +1,47 @@
-use winit::{
-    Event, EventsLoop, WindowEvent
-};
+use winit;
 
-use specs::prelude::*;
-
-#[derive(Debug, Clone, Default)]
-pub struct UserInput {
-    pub end_requested: bool,
-    pub new_frame_size: Option<(f64, f64)>,
-    pub new_mouse_position: Option<(f64, f64)>,
+pub struct InputState {
+    pub events_loop: winit::EventsLoop,
 }
 
-impl UserInput {
-    pub fn poll_events_loop(events_loop: &mut EventsLoop) -> Self {
-        let mut output = UserInput::default();
-        events_loop.poll_events(|event| match event {
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => output.end_requested = true,
-            Event::WindowEvent {
-                event: WindowEvent::Resized(logical),
-                ..
-            } => {
-                output.new_frame_size = Some((logical.width, logical.height));
+pub enum Command {
+    Move,
+    Close,
+}
+
+impl InputState{
+
+    pub fn new() -> InputState {
+        let events_loop = winit::EventsLoop::new();
+
+        InputState {
+            events_loop: events_loop,
+        }
+    }
+
+    pub fn process_raw_input(&mut self) -> Option<Command> {
+
+        let mut next = None;
+
+        self.events_loop.poll_events(|event| {
+            if let winit::Event::WindowEvent { event, .. } = event {
+                #[allow(unused_variables)]
+                    match event {
+                    winit::WindowEvent::KeyboardInput {
+                        input:
+                        winit::KeyboardInput {
+                            virtual_keycode: Some(winit::VirtualKeyCode::Escape),
+                            ..
+                        },
+                        ..
+                    }
+                    | winit::WindowEvent::CloseRequested => next = Some(Command::Close),
+                    _ => (),
+                }
             }
-            Event::WindowEvent {
-                event: WindowEvent::CursorMoved { position, .. },
-                ..
-            } => {
-                output.new_mouse_position = Some((position.x, position.y));
-            }
-            _ => (),
         });
-        output
+
+        next
+
     }
 }
