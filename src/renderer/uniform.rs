@@ -8,7 +8,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Uniform<B: Backend> {
-    buffer: Option<BufferState<B>>,
+    pub buffer: Option<BufferState<B>>,
     pub desc: Option<DescSet<B>>,
 }
 

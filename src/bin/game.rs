@@ -4,6 +4,7 @@ use blackhole::renderer::RendererState;
 use blackhole::renderer::window::WindowState;
 use blackhole::renderer::backend::{BackendState, create_backend};
 use blackhole::input::{InputState, Command};
+use blackhole::renderer::scene::Scene;
 
 fn main() {
     env_logger::init();
@@ -16,6 +17,8 @@ fn main() {
 
     let mut running = true;
 
+    let mut scene = Scene::new();
+
     while (running) {
 
         match input.process_raw_input() {
@@ -24,11 +27,15 @@ fn main() {
                     Command::Close => {
                         running = false;
                     },
-                    _ => (),
+                    _ => {
+                        &scene.update_cube(command);
+                    },
                 }
             },
             None => (),
         }
-        renderer_state.render();
+
+
+        renderer_state.render(&scene);
     }
 }

@@ -11,6 +11,7 @@ pub mod buffer;
 pub mod descriptor;
 pub mod framebuffer;
 pub mod uniform;
+pub mod scene;
 
 extern crate nalgebra_glm as glm;
 
@@ -22,7 +23,7 @@ use self::pipeline::PipelineState;
 use self::descriptor::DescSetLayout;
 use self::framebuffer::FramebufferState;
 use self::uniform::Uniform;
-
+use self::scene::Scene;
 
 use gfx_hal::{Backend, buffer::Usage, format, image, CommandPool};
 
@@ -32,7 +33,6 @@ use gfx_hal::window::Swapchain;
 
 use gfx_hal::{pso::DescriptorSetLayoutBinding, DescriptorPool, pool, Compute, command, Submission,  QueueFamily};
 use gfx_hal::format::Swizzle;
-
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -207,7 +207,26 @@ impl<B: Backend> RendererState<B> {
 
     }
 
-    pub fn render(&mut self) {
+    pub fn render(&mut self, scene: &Scene) {
+
+        let uniform = &mut self.uniform;
+
+        let view_vec: Vec<f32> = scene.camera.data.to_vec();
+
+        let mut data = view_vec.clone();
+
+        let mut model = scene.cube_model_mat();
+
+        let mut model_vec: Vec<f32> = model.as_slice().to_vec();
+
+        data.append(&mut model_vec);
+
+        let mut color = scene.color;
+
+        let mut color_vec: Vec<f32> = color.as_slice().to_vec();
+
+        data.append(&mut color_vec);
+
         let sem_index = self.framebuffer.next_acq_pre_pair_index();
 
         let frame: gfx_hal::SwapImageIndex = unsafe {
@@ -233,6 +252,14 @@ impl<B: Backend> RendererState<B> {
                 }
         };
 
+        //self.uniform[frame as usize].buffer.take().unwrap().update_data(0, &data);
+
+        uniform[frame as usize]
+            .buffer
+            .as_mut()
+            .unwrap()
+            .update_data(0, &data);
+
         let (fid, sid) = self
             .framebuffer
             .get_frame_data(Some(frame as usize), Some(sem_index));
@@ -253,6 +280,7 @@ impl<B: Backend> RendererState<B> {
                 .device
                 .reset_fence(framebuffer_fence)
                 .unwrap();
+
 
             command_pool.reset();
 

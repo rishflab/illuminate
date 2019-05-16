@@ -5,7 +5,8 @@ pub struct InputState {
 }
 
 pub enum Command {
-    Move,
+    MoveLeft,
+    MoveRight,
     Close,
 }
 
@@ -26,7 +27,7 @@ impl InputState{
         self.events_loop.poll_events(|event| {
             if let winit::Event::WindowEvent { event, .. } = event {
                 #[allow(unused_variables)]
-                    match event {
+                match event {
                     winit::WindowEvent::KeyboardInput {
                         input:
                         winit::KeyboardInput {
@@ -36,6 +37,22 @@ impl InputState{
                         ..
                     }
                     | winit::WindowEvent::CloseRequested => next = Some(Command::Close),
+                    winit::WindowEvent::KeyboardInput {
+                        input:
+                        winit::KeyboardInput {
+                            virtual_keycode: Some(winit::VirtualKeyCode::Left),
+                            ..
+                        },
+                        ..
+                    } => next = Some(Command::MoveLeft),
+                    winit::WindowEvent::KeyboardInput {
+                        input:
+                        winit::KeyboardInput {
+                            virtual_keycode: Some(winit::VirtualKeyCode::Right),
+                            ..
+                        },
+                        ..
+                    } => next = Some(Command::MoveRight),
                     _ => (),
                 }
             }
