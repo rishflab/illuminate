@@ -2,7 +2,7 @@ use gfx_hal::{pso, Backend, MemoryType, buffer};
 
 use super::buffer::BufferState;
 use super::device::DeviceState;
-use super::descriptor::{DescSet, DescriptorState, DescSetWrite};
+use super::descriptor::{DescSet, DescSetWrite};
 
 use std::cell::RefCell;
 use std::rc::Rc;

@@ -2,7 +2,7 @@ extern crate blackhole;
 
 use blackhole::renderer::RendererState;
 use blackhole::renderer::window::WindowState;
-use blackhole::renderer::backend::{BackendState, create_backend};
+use blackhole::renderer::backend::{create_backend};
 use blackhole::input::{InputState, Command};
 use blackhole::renderer::scene::Scene;
 
@@ -19,7 +19,7 @@ fn main() {
 
     let mut scene = Scene::new();
 
-    while (running) {
+    while running {
 
         match input.process_raw_input() {
             Some(command) => {

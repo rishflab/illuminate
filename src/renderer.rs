@@ -25,19 +25,17 @@ use self::framebuffer::FramebufferState;
 use self::uniform::Uniform;
 use self::scene::Scene;
 
-use gfx_hal::{Backend, buffer::Usage, format, image, CommandPool};
+use gfx_hal::{Backend, format, image};
 
-use gfx_hal::{Device, pso, buffer as b};
+use gfx_hal::{Device, pso};
 use gfx_hal::window::Swapchain;
 
 
-use gfx_hal::{pso::DescriptorSetLayoutBinding, DescriptorPool, pool, Compute, command, Submission,  QueueFamily};
-use gfx_hal::format::Swizzle;
+use gfx_hal::{command, Submission};
 
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::iter;
-use crate::renderer::buffer::BufferState;
 use crate::renderer::descriptor::DescriptorState;
 
 const ENTRY_NAME: &str = "main";
@@ -73,7 +71,7 @@ impl<B: Backend> RendererState<B> {
 
         let (desc_layout, uniform_desc_layout) = {
 
-            let mut desc_layout = DescSetLayout::new(
+            let desc_layout = DescSetLayout::new(
                 Rc::clone(&device),
                 vec![
                     pso::DescriptorSetLayoutBinding {
@@ -165,13 +163,13 @@ impl<B: Backend> RendererState<B> {
         let view_vec: Vec<f32> = view.data.to_vec();
         let mut data = view_vec.clone();
 
-        let mut model = glm::translation(&glm::vec3(0.0, 0.0, 0.0));
+        let model = glm::translation(&glm::vec3(0.0, 0.0, 0.0));
 
         let mut model_vec: Vec<f32> = model.as_slice().to_vec();
 
         data.append(&mut model_vec);
 
-        let mut color = glm::vec4(0.0, 0.0, 0.0, 0.0);
+        let color = glm::vec4(0.0, 0.0, 0.0, 0.0);
 
         let mut color_vec: Vec<f32> = color.as_slice().to_vec();
 
@@ -215,13 +213,13 @@ impl<B: Backend> RendererState<B> {
 
         let mut data = view_vec.clone();
 
-        let mut model = scene.cube_model_mat();
+        let model = scene.cube_model_mat();
 
         let mut model_vec: Vec<f32> = model.as_slice().to_vec();
 
         data.append(&mut model_vec);
 
-        let mut color = scene.color;
+        let color = scene.color;
 
         let mut color_vec: Vec<f32> = color.as_slice().to_vec();
 

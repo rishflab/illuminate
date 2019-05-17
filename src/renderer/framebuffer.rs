@@ -1,7 +1,6 @@
-use gfx_hal::{Backend, Device, Surface, SwapchainConfig, pso, pool, image as i, format as f, DescriptorPool};
+use gfx_hal::{Backend, Device, pso, pool, image as i, format as f, DescriptorPool};
 use super::device::DeviceState;
 use super::swapchain::SwapchainState;
-use super::descriptor::{DescSetWrite, DescSet, DescSetLayout};
 use crate::renderer::COLOR_RANGE;
 
 use std::cell::RefCell;
@@ -24,11 +23,11 @@ impl<B: Backend> FramebufferState<B> {
     ) -> Self {
 
         let frame_images = {
-            let extent = i::Extent {
-                width: swapchain.extent.width as _,
-                height: swapchain.extent.height as _,
-                depth: 1,
-            };
+//            let _extent = i::Extent {
+//                width: swapchain.extent.width as _,
+//                height: swapchain.extent.height as _,
+//                depth: 1,
+//            };
 
 
             let pairs = swapchain.backbuffer.take().unwrap()

@@ -44,7 +44,7 @@ impl<B: Backend> PipelineState<B> {
                 specialization: pso::Specialization::default(),
             };
 
-            let mut pipeline_desc = pso::ComputePipelineDesc::new(
+            let pipeline_desc = pso::ComputePipelineDesc::new(
                 comp_entry,
                 &pipeline_layout,
             );
