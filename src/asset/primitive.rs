@@ -21,7 +21,7 @@ use super::ImportData;
 //}
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Vertex {
     pub position: Vector3,
     pub normal: Vector3,
@@ -69,7 +69,9 @@ pub struct Primitive {
 
     pub material: Rc<Material>,
 
-    //pbr_shader: Rc<PbrShader>,
+    pub vertices: Vec<Vertex>,
+
+    pub indices: Vec<u32>,
 
     // TODO!: mode, targets
 }
@@ -81,7 +83,6 @@ impl Primitive {
         indices: Option<Vec<u32>>,
         mode: GLenum,
         material: Rc<Material>,
-        //shader: Rc<PbrShader>,
     ) -> Primitive {
         let num_indices = indices.as_ref().map(|i| i.len()).unwrap_or(0);
         let prim = Primitive {
@@ -91,13 +92,13 @@ impl Primitive {
             vao: 0, vbo: 0, ebo: None,
             mode,
             material,
-            //pbr_shader: shader,
+            vertices: vertices.to_vec(),
+            indices: indices.unwrap().to_vec()
         };
 
-        // now that we have all the required data, set the vertex buffers and its attribute pointers.
-       // unsafe { prim.setup_primitive(vertices, indices) }
         prim
     }
+
 
     pub fn from_gltf(
         g_primitive: &gltf::Primitive<'_>,

@@ -31,6 +31,15 @@ gfx-hal = "0.2.0"
 gfx-backend-vulkan = "0.2.0"
 bitflags = "1.0.4"
 num-traits = "0.2.6"
+#amethyst_gltf = "0.5"
+
+err-derive = "0.1"
+amethyst_assets = "0.6"
+
+[dependencies.amethyst_error]
+git = "https://github.com/amethyst/amethyst.git"
+branch = "master"
+
 
 #
 #[dependencies.gfx-backend-gl]

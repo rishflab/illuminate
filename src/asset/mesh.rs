@@ -26,6 +26,7 @@ impl Mesh {
         imp: &ImportData,
         base_path: &Path,
     ) -> Mesh {
+
         let primitives: Vec<Primitive> = g_mesh.primitives()
             .enumerate()
             .map(|(i, g_prim)| {
