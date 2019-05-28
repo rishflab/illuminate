@@ -28,7 +28,7 @@ impl<B: Backend> PipelineState<B> {
             .expect("Can't create pipeline layout");
 
         let shader = {
-            let glsl = fs::read_to_string("shaders/raytracer.comp").unwrap();
+            let glsl = fs::read_to_string("shaders/transfer_vertices.comp").unwrap();
             let spirv: Vec<u8> = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute)
                 .unwrap()
                 .bytes()
