@@ -54,12 +54,14 @@ pub struct RendererState<B: Backend> {
     pub pipeline: PipelineState<B>,
     pub framebuffer: FramebufferState<B>,
     pub descriptor: DescriptorState<B>,
-    pub uniform: Vec<Uniform<B>>,
+    pub camera: Vec<Uniform<B>>,
+    pub indices: Vec<Uniform<B>>,
+    pub vertices: Vec<Uniform<B>>,
 }
 
 impl<B: Backend> RendererState<B> {
 
-    pub unsafe fn new(mut backend: BackendState<B>, window: WindowState) -> Self {
+    pub unsafe fn new(mut backend: BackendState<B>, window: WindowState, scene: &Scene) -> Self {
 
         println!("creating render state");
 
@@ -69,7 +71,7 @@ impl<B: Backend> RendererState<B> {
         )));
 
 
-        let (desc_layout, uniform_desc_layout) = {
+        let (desc_layout, camera_desc_layout, indices_desc_layout, vertices_desc_layout) = {
 
             let desc_layout = DescSetLayout::new(
                 Rc::clone(&device),
@@ -84,7 +86,29 @@ impl<B: Backend> RendererState<B> {
                 ],
             );
 
-            let uniform_desc = DescSetLayout::new(
+            let camera_desc = DescSetLayout::new(
+                Rc::clone(&device),
+                vec![pso::DescriptorSetLayoutBinding {
+                    binding: 0,
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: 1,
+                    stage_flags: pso::ShaderStageFlags::COMPUTE,
+                    immutable_samplers: false,
+                }],
+            );
+
+            let indices_desc = DescSetLayout::new(
+                Rc::clone(&device),
+                vec![pso::DescriptorSetLayoutBinding {
+                    binding: 0,
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: 1,
+                    stage_flags: pso::ShaderStageFlags::COMPUTE,
+                    immutable_samplers: false,
+                }],
+            );
+
+            let vertices_desc = DescSetLayout::new(
                 Rc::clone(&device),
                 vec![pso::DescriptorSetLayoutBinding {
                     binding: 0,
@@ -96,18 +120,25 @@ impl<B: Backend> RendererState<B> {
             );
 
 
-            (desc_layout, uniform_desc)
+            (desc_layout, camera_desc, indices_desc, vertices_desc)
         };
-
 
         let mut desc_pool = device
             .borrow()
             .device
             .create_descriptor_pool(
-                4, // # of sets
+                8, // # of sets
                 &[
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::StorageImage,
+                        count: 2,
+                    },
+                    pso::DescriptorRangeDesc {
+                        ty: pso::DescriptorType::UniformBuffer,
+                        count: 2,
+                    },
+                    pso::DescriptorRangeDesc {
+                        ty: pso::DescriptorType::UniformBuffer,
                         count: 2,
                     },
                     pso::DescriptorRangeDesc {
@@ -133,58 +164,70 @@ impl<B: Backend> RendererState<B> {
 
         println!("created framebuffer");
 
-        let (descriptor, uniform_desc) = {
+        let (descriptor, camera_desc, indices_desc, vertices_desc) = {
             let descriptor = DescriptorState {
                 descriptor_sets: framebuffer.write_descriptor_sets(Rc::clone(&device), desc_layout.get_layout(), &mut desc_pool),
             };
 
-            let uniform_desc = (0..2).map(|_|{
-                let desc = uniform_desc_layout.create_desc_set(&mut desc_pool);
+            let camera_desc = (0..2).map(|_|{
+                let desc = camera_desc_layout.create_desc_set(&mut desc_pool);
                 desc
             }).collect::<Vec<_>>();
 
-            (descriptor, uniform_desc)
+            let indices_desc = (0..2).map(|_|{
+                let desc = indices_desc_layout.create_desc_set(&mut desc_pool);
+                desc
+            }).collect::<Vec<_>>();
+
+            let vertices_desc = (0..2).map(|_|{
+                let desc = vertices_desc_layout.create_desc_set(&mut desc_pool);
+                desc
+            }).collect::<Vec<_>>();
+
+            (descriptor, camera_desc, indices_desc, vertices_desc)
         };
 
         let pipeline = PipelineState::new(
-            vec![desc_layout.get_layout(), uniform_desc_layout.get_layout()],
+            vec![desc_layout.get_layout(), camera_desc_layout.get_layout(), indices_desc_layout.get_layout(), vertices_desc_layout.get_layout()],
             Rc::clone(&device),
         );
 
-
-        let view = glm::look_at(
-            &glm::vec3(1.0,2.0,7.0), // Camera is at (4,3,3), in World Space
-            &glm::vec3(0.0,0.0,0.0), // and looks at the origin
-            &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
-        );
-
-        let view = glm::inverse(&view);
-
-        let view_vec: Vec<f32> = view.data.to_vec();
-        let mut data = view_vec.clone();
-
-        let model = glm::translation(&glm::vec3(0.0, 0.0, 0.0));
-
-        let mut model_vec: Vec<f32> = model.as_slice().to_vec();
-
-        data.append(&mut model_vec);
-
-        let color = glm::vec4(0.0, 0.0, 0.0, 0.0);
-
-        let mut color_vec: Vec<f32> = color.as_slice().to_vec();
-
-        data.append(&mut color_vec);
+        let data = scene.camera_data();
 
         println!("view mat: {:?}", data);
 
         println!("Memory types: {:?}", backend.adapter.memory_types);
 
-        let uniforms = uniform_desc.into_iter().map(|d|{
+        let camera = camera_desc.into_iter().map(|d|{
 
             let uniform = Uniform::new(
                 Rc::clone(&device),
                 &backend.adapter.memory_types,
                 &data,
+                d,
+                0,
+            );
+            uniform
+        }).collect::<Vec<_>>();
+
+        let indices = indices_desc.into_iter().map(|d|{
+
+            let uniform = Uniform::new(
+                Rc::clone(&device),
+                &backend.adapter.memory_types,
+                &scene.mesh_data.indices,
+                d,
+                0,
+            );
+            uniform
+        }).collect::<Vec<_>>();
+
+        let vertices = vertices_desc.into_iter().map(|d|{
+
+            let uniform = Uniform::new(
+                Rc::clone(&device),
+                &backend.adapter.memory_types,
+                &scene.mesh_data.positions,
                 d,
                 0,
             );
@@ -200,30 +243,15 @@ impl<B: Backend> RendererState<B> {
             pipeline: pipeline,
             framebuffer: framebuffer,
             descriptor: descriptor,
-            uniform: uniforms,
+            camera: camera,
+            indices: indices,
+            vertices: vertices,
         }
 
     }
 
     pub fn render(&mut self, scene: &Scene) {
 
-        let uniform = &mut self.uniform;
-
-        let view_vec: Vec<f32> = scene.camera.data.to_vec();
-
-        let mut data = view_vec.clone();
-
-        let model = scene.cube_model_mat();
-
-        let mut model_vec: Vec<f32> = model.as_slice().to_vec();
-
-        data.append(&mut model_vec);
-
-        let color = scene.color;
-
-        let mut color_vec: Vec<f32> = color.as_slice().to_vec();
-
-        data.append(&mut color_vec);
 
         let sem_index = self.framebuffer.next_acq_pre_pair_index();
 
@@ -250,9 +278,11 @@ impl<B: Backend> RendererState<B> {
                 }
         };
 
+        let data = scene.camera_data();
+
         //self.uniform[frame as usize].buffer.take().unwrap().update_data(0, &data);
 
-        uniform[frame as usize]
+        self.camera[frame as usize]
             .buffer
             .as_mut()
             .unwrap()
@@ -292,7 +322,9 @@ impl<B: Backend> RendererState<B> {
                 0,
                 vec!(
                     &self.descriptor.descriptor_sets[frame as usize],
-                    self.uniform[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
+                    self.camera[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
+                    self.indices[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
+                    self.vertices[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
                 ),
                 &[]
             );
