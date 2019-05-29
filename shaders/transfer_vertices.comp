@@ -105,18 +105,6 @@ float mollerTrumboreIntersectTriangle(vec3 orig, vec3 dir, vec3 v0, vec3 v1, vec
     return -1.0;
 }
 
-//void build_triangles(){
-//
-//    for (int i=0; i < indices.length(); i=i+3){
-//        uint index = indices[i];
-//
-//        tris[i] = vertices[indices[i]];
-//        tris[i] = vertices[indices[i+1]];
-//        tris[i] = vertices[indices[i+2]];
-//
-//    }
-//
-//}
 
 void model_world_transform(mat4 transform, inout vec3 v0, inout vec3 v1, inout vec3 v2){
 
@@ -152,29 +140,13 @@ void main() {
     Ray ray = Ray(cam_origin, ray_direction);
 
 
-//    Triangle cube[num] = Triangle[num](
-//    Triangle(vec3(-1.0f,-1.0f,-1.0f), vec3(-1.0f,-1.0f, 1.0f), vec3(-1.0f, 1.0f, 1.0f)),
-//    Triangle(vec3(1.0f, 1.0f,-1.0f), vec3(-1.0f,-1.0f,-1.0f), vec3(-1.0f, 1.0f,-1.0f)),
-//    Triangle(vec3(1.0f,-1.0f, 1.0f), vec3(-1.0f,-1.0f,-1.0f), vec3(1.0f,-1.0f,-1.0f)),
-//    Triangle(vec3(1.0f, 1.0f,-1.0f), vec3(1.0f,-1.0f,-1.0f), vec3(-1.0f,-1.0f,-1.0f)),
-//    Triangle(vec3(-1.0f,-1.0f,-1.0f), vec3(-1.0f, 1.0f, 1.0f), vec3(-1.0f, 1.0f,-1.0f)),
-//    Triangle(vec3(1.0f,-1.0f, 1.0f), vec3(-1.0f,-1.0f, 1.0f), vec3(-1.0f,-1.0f,-1.0f)),
-//    Triangle(vec3(-1.0f, 1.0f, 1.0f), vec3(-1.0f,-1.0f, 1.0f), vec3(1.0f,-1.0f, 1.0f)),
-//    Triangle(vec3(1.0f, 1.0f, 1.0f), vec3(1.0f,-1.0f,-1.0f), vec3(1.0f, 1.0f,-1.0f)),
-//    Triangle(vec3(1.0f,-1.0f,-1.0f), vec3(1.0f, 1.0f, 1.0f), vec3(1.0f,-1.0f, 1.0f)),
-//    Triangle(vec3(1.0f, 1.0f, 1.0f), vec3(1.0f, 1.0f,-1.0f), vec3(-1.0f, 1.0f,-1.0f)),
-//    Triangle(vec3(1.0f, 1.0f, 1.0f), vec3(-1.0f, 1.0f,-1.0f), vec3(-1.0f, 1.0f, 1.0f)),
-//    Triangle(vec3(1.0f, 1.0f, 1.0f), vec3(-1.0f, 1.0f, 1.0f), vec3(1.0f,-1.0f, 1.0f))
-//    );
-
-
     Light l = Light(vec3(0.0, 6.0, 3.0), 0.5);
 
     vec4 to_write = color;
 
     for(int i=0; i<indices.length(); i= i+3){
 
-        //Triangle t = cube[i];
+
         vec3 v0 = vertices[indices[i]];
         vec3 v1 = vertices[indices[i+1]];
         vec3 v2 = vertices[indices[i+2]];
@@ -182,7 +154,7 @@ void main() {
         model_world_transform(model, v0, v1, v2);
         float a = mollerTrumboreIntersectTriangle(ray.origin, ray.direction, v0, v1, v2);
 
-        //to_write.x -= 0.05;
+
 
         if (a > EPSILON) {
 
