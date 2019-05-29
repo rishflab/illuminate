@@ -54,17 +54,37 @@ fn extract_data(buffer_data: &Vec<Vec<u8>>, views: &Vec<View>, accessor: &Access
             println!("{:?}", data.len());
             println!("{:?}", data);
             let bytes = bytes_to_u32(data, 2);
+            println!("{:?}", bytes.len());
             println!("{:?}", bytes);
             u32_to_bytes(bytes)
         },
         _ => {
             let offset = accessor.view().offset() + accessor.offset();
             let mut data: Vec<u8> = buffer[offset..(offset + accessor.size() * accessor.count())].to_vec();
+            let clone = data.clone();
             println!("{:?}", data.len());
             println!("{:?}", data);
+            let bytes = bytes_to_f32(clone, 4);
+            println!("{:?}", bytes.len());
+            println!("{:?}", bytes);
+
             data
         },
     }
+
+}
+
+
+fn bytes_to_f32(bytes: Vec<u8>, step: usize) -> Vec<f32> {
+    use byteorder::{LittleEndian, ByteOrder};
+
+    let mut result: Vec<f32> = Vec::new();
+
+    for i in (0..bytes.len()).step_by(step) {
+        result.push(LittleEndian::read_f32(&bytes[i..]));
+    }
+
+    result
 
 }
 
