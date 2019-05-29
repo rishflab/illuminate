@@ -15,26 +15,28 @@ use image::load;
 use std::iter::FromIterator;
 
 
-pub fn load_gltf(path: &str) -> Result<gltf::Gltf, Box<StdError>> {
-    let file = fs::File::open(&path)?;
+pub fn load_gltf(dir: &str, file_name: &str) -> Result<gltf::Gltf, Box<StdError>> {
+    use std::path::Path;
+    let path = Path::new(dir).join(file_name);
+    let file = fs::File::open(&path).expect("Could not find gltf file");
     let reader = io::BufReader::new(file);
     let gltf = gltf::Gltf::from_reader(reader)?;
-    //println!("{:#?}", asset);
     Ok(gltf)
 }
 
-fn load_from_source(source: &Source) -> Vec<u8> {
+fn load_from_source(source: &Source, dir: &str) -> Vec<u8> {
 
     use std::io::Read;
 
     let mut v = Vec::new();
     match source {
-        Source::Uri(path) => {
-            let mut file = File::open(&path).expect("Couldn't find file");
+        Source::Uri(file_name) => {
+            let path = Path::new(dir).join(file_name);
+            let mut file = File::open(path).expect("Couldn't find file");
             file.read_to_end(&mut v);
         },
         Source::Bin => {
-            ()
+            panic!("loading buffer from embedded binary not implemented");
         },
     };
 
@@ -122,7 +124,9 @@ pub struct MeshData {
     pub normals: Vec<u8>,
 }
 
-pub fn mesh_data_from_gltf(gltf: &gltf::Gltf) -> MeshData {
+pub fn mesh_data_from_gltf(gltf: &gltf::Gltf, dir: &str) -> MeshData {
+
+    use std::path::Path;
 
     let mut sources = Vec::new();
 
@@ -140,7 +144,7 @@ pub fn mesh_data_from_gltf(gltf: &gltf::Gltf) -> MeshData {
     let buffers: Vec<Vec<u8>> = sources
         .iter()
         .map(|source|{
-            load_from_source(&Source::Uri("assets/Box0.bin"))
+            load_from_source(source, dir)
         }).collect();
 
     println!("buffer count: {:?}", buffers.len());

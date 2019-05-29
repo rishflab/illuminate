@@ -10,8 +10,9 @@ use blackhole::asset::{mesh_data_from_gltf, MeshData, load_gltf};
 fn main() {
     env_logger::init();
 
-    let gltf = load_gltf("assets/Box.gltf").expect("runtime error");
-    let mesh_data = mesh_data_from_gltf(&gltf);
+    let asset_folder = "assets";
+    let gltf = load_gltf(asset_folder, "Box.gltf").expect("failed to load gltf");
+    let mesh_data = mesh_data_from_gltf(&gltf, asset_folder);
 
     let mut scene = Scene::new(mesh_data);
 
