@@ -50,14 +50,14 @@ impl<B: Backend> DescSetLayout<B> {
     }
 }
 
-//impl<B: Backend> Drop for DescSetLayout<B> {
-//    fn drop(&mut self) {
-//        let device = &self.device.borrow().device;
-//        unsafe {
-//            device.destroy_descriptor_set_layout(self.layout.take().unwrap());
-//        }
-//    }
-//}
+impl<B: Backend> Drop for DescSetLayout<B> {
+    fn drop(&mut self) {
+        let device = &self.device.borrow().device;
+        unsafe {
+            device.destroy_descriptor_set_layout(self.layout.take().unwrap());
+        }
+    }
+}
 
 pub struct DescSet<B: Backend> {
     pub set: Option<B::DescriptorSet>,

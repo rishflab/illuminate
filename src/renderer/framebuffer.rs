@@ -23,12 +23,6 @@ impl<B: Backend> FramebufferState<B> {
     ) -> Self {
 
         let frame_images = {
-//            let _extent = i::Extent {
-//                width: swapchain.extent.width as _,
-//                height: swapchain.extent.height as _,
-//                depth: 1,
-//            };
-
 
             let pairs = swapchain.backbuffer.take().unwrap()
                 .into_iter()

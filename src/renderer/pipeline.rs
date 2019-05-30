@@ -39,7 +39,7 @@ impl<B: Backend> PipelineState<B> {
                 .collect();
             device.create_shader_module(&spirv).expect("Could not load shader module")
         };
-        
+
         let pipeline = {
             let comp_entry = pso::EntryPoint::<B> {
                 entry: crate::renderer::ENTRY_NAME,
@@ -54,7 +54,6 @@ impl<B: Backend> PipelineState<B> {
 
             device.create_compute_pipeline(&pipeline_desc, None).expect("Could not create pipeline")
         };
-
 
         PipelineState {
             pipeline: Some(pipeline),
