@@ -9,7 +9,7 @@ use std::rc::Rc;
 pub struct FramebufferState<B: Backend> {
     command_pools: Option<Vec<gfx_hal::CommandPool<B, gfx_hal::Compute>>>,
     framebuffer_fences: Option<Vec<B::Fence>>,
-    frame_images: Option<Vec<(B::Image, B::ImageView)>>,
+    image_views: Option<Vec<B::ImageView>>,
     acquire_semaphores: Option<Vec<B::Semaphore>>,
     present_semaphores: Option<Vec<B::Semaphore>>,
     last_ref: usize,
@@ -24,11 +24,11 @@ impl<B: Backend> FramebufferState<B> {
 
         let frame_images = {
 
-            let pairs = swapchain.backbuffer.take().unwrap()
-                .into_iter()
+            let pairs = swapchain.backbuffer
+                .iter()
                 .map(|image| {
                     println!("creating image view");
-                    let rtv = device
+                    let view = device
                         .borrow()
                         .device
                         .create_image_view(
@@ -40,10 +40,10 @@ impl<B: Backend> FramebufferState<B> {
                         )
                         .unwrap();
 
-                    println!("{:?}", rtv);
+                    println!("{:?}", view);
 
 
-                    (image, rtv)
+                    view
                 })
                 .collect::<Vec<_>>();
             pairs
@@ -79,7 +79,7 @@ impl<B: Backend> FramebufferState<B> {
 
         FramebufferState {
             framebuffer_fences: Some(fences),
-            frame_images: Some(frame_images),
+            image_views: Some(frame_images),
             command_pools: Some(command_pools),
             present_semaphores: Some(present_semaphores),
             acquire_semaphores: Some(acquire_semaphores),
@@ -96,11 +96,11 @@ impl<B: Backend> FramebufferState<B> {
     ) -> Vec<B::DescriptorSet> {
 
 
-        self.frame_images
+        self.image_views
             .as_ref()
             .unwrap()
             .iter()
-            .map(|(_, view)| {
+            .map(|view| {
                 let desc_set = desc_pool.allocate_set(desc_layout).unwrap();
 
                 device
@@ -182,7 +182,7 @@ impl<B: Backend> Drop for FramebufferState<B> {
                 device.destroy_semaphore(present_semaphore);
             }
 
-            for (_, rtv) in self.frame_images.take().unwrap() {
+            for rtv in self.image_views.take().unwrap() {
                 device.destroy_image_view(rtv);
             }
         }

@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 pub struct SwapchainState<B: Backend> {
     pub swapchain: Option<B::Swapchain>,
-    pub backbuffer: Option<Vec<B::Image>>,
+    pub backbuffer: Vec<B::Image>,
     pub device: Rc<RefCell<DeviceState<B>>>,
     pub extent: i::Extent,
     pub format: format::Format,
@@ -47,12 +47,17 @@ impl<B: Backend> SwapchainState<B> {
 
         let swapchain = SwapchainState {
             swapchain: Some(swapchain),
-            backbuffer: Some(backbuffer),
+            backbuffer: backbuffer,
             device,
             extent,
             format,
         };
         swapchain
+    }
+
+    pub unsafe fn number_of_images(&self) -> usize {
+        let len = self.backbuffer.len();
+        len
     }
 }
 

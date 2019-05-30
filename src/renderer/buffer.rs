@@ -6,13 +6,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use core::mem::size_of;
 
-use super::descriptor::{DescSet, DescSetWrite};
-
-
-
+//use super::descriptor::{DescSetWrite};
 
 pub struct BufferState<B: Backend> {
-    pub desc: Option<DescSet<B>>,
+    //pub desc: Option<DescSet<B>>,
     pub memory: Option<B::Memory>,
     pub buffer: Option<B::Buffer>,
     pub device: Rc<RefCell<DeviceState<B>>>,
@@ -24,13 +21,17 @@ impl<B: Backend> BufferState<B> {
         self.buffer.as_ref().unwrap()
     }
 
+    pub fn bind_to_descriptor(&self, desc: B::DescriptorSet){
+
+    }
+
     pub unsafe fn new<T>(
         device: Rc<RefCell<DeviceState<B>>>,
         memory_types: &[MemoryType],
         data: &[T],
-        mut desc: DescSet<B>,
+        //mut desc: DescSet<B>,
         //layout: &B::DescriptorSetLayout,
-        binding: u32,
+        //binding: u32,
     ) -> Self
         where
             T: Copy,
@@ -42,29 +43,15 @@ impl<B: Backend> BufferState<B> {
             memory_types,
         );
 
-        //let buffer = Some(buffer);
-
-        desc.write_to_state(
-            vec![DescSetWrite {
-                binding: binding,
-                array_offset: 0,
-                descriptors: Some(pso::Descriptor::Buffer(
-                    &buffer,
-                    None..None,
-                )),
-            }],
-            &mut device.borrow_mut().device,
-        );
 
         BufferState {
-            desc: Some(desc),
+            //desc: Some(desc),
             memory: Some(memory),
             buffer: Some(buffer),
             device: device,
             size,
         }
     }
-
 
     unsafe fn init_data<T>(
         device_ptr: Rc<RefCell<DeviceState<B>>>,

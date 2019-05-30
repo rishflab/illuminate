@@ -19,16 +19,15 @@ use self::backend::BackendState;
 use self::device::DeviceState;
 use self::swapchain::SwapchainState;
 use self::pipeline::PipelineState;
-use self::descriptor::DescSetLayout;
 use self::framebuffer::FramebufferState;
 use self::buffer::BufferState;
 use self::scene::Scene;
+use self::descriptor::DescSetLayout;
 
 use gfx_hal::{Backend, format, image};
 
 use gfx_hal::{Device, pso};
 use gfx_hal::window::Swapchain;
-
 
 use gfx_hal::{command, Submission};
 
@@ -36,7 +35,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::iter;
 use std::path::Path;
-use crate::renderer::descriptor::DescriptorState;
 
 const ENTRY_NAME: &str = "main";
 
@@ -53,10 +51,13 @@ pub struct RendererState<B: Backend> {
     pub window: WindowState,
     pub pipeline: PipelineState<B>,
     pub framebuffer: FramebufferState<B>,
-    pub descriptor: DescriptorState<B>,
-    pub camera: Vec<BufferState<B>>,
-    pub indices: Vec<BufferState<B>>,
-    pub vertices: Vec<BufferState<B>>,
+    pub frame_descriptors: Vec<B::DescriptorSet>,
+    pub camera_descriptors: Vec<B::DescriptorSet>,
+    pub index_descriptors: Vec<B::DescriptorSet>,
+    pub vertex_descriptors: Vec<B::DescriptorSet>,
+    pub camera_buffer: BufferState<B>,
+    pub index_buffer: BufferState<B>,
+    pub vertex_buffer: BufferState<B>,
 }
 
 impl<B: Backend> RendererState<B> {
@@ -71,9 +72,9 @@ impl<B: Backend> RendererState<B> {
         )));
 
 
-        let (desc_layout, camera_desc_layout, indices_desc_layout, vertices_desc_layout) = {
+        let (frame_desc_layout, camera_desc_layout, indices_desc_layout, vertices_desc_layout) = {
 
-            let desc_layout = DescSetLayout::new(
+            let frame_desc_layout = DescSetLayout::new(
                 Rc::clone(&device),
                 vec![
                     pso::DescriptorSetLayoutBinding {
@@ -120,30 +121,36 @@ impl<B: Backend> RendererState<B> {
             );
 
 
-            (desc_layout, camera_desc, indices_desc, vertices_desc)
+            (frame_desc_layout, camera_desc, indices_desc, vertices_desc)
         };
+
+        let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
+        println!("created swap chain");
+        let number_of_images = swapchain.number_of_images();
+
+        println!("backbuffer size: {:?}", number_of_images);
 
         let mut desc_pool = device
             .borrow()
             .device
             .create_descriptor_pool(
-                8, // # of sets
+                4 * number_of_images, // # of sets
                 &[
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::StorageImage,
-                        count: 2,
+                        count: 1 * number_of_images,
                     },
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::UniformBuffer,
-                        count: 2,
+                        count: 1 * number_of_images,
                     },
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::UniformBuffer,
-                        count: 2,
+                        count: 1 * number_of_images,
                     },
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::UniformBuffer,
-                        count: 2,
+                        count: 1 * number_of_images,
                     },
                 ],
                 pso::DescriptorPoolCreateFlags::empty(),
@@ -151,10 +158,6 @@ impl<B: Backend> RendererState<B> {
             .expect("Could not create descriptor pool");
 
         println!("created desc pool");
-
-        let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
-
-        println!("created swap chain");
 
 
         let mut framebuffer = FramebufferState::new(
@@ -164,31 +167,48 @@ impl<B: Backend> RendererState<B> {
 
         println!("created framebuffer");
 
-        let (descriptor, camera_desc, indices_desc, vertices_desc) = {
-            let descriptor = DescriptorState {
-                descriptor_sets: framebuffer.write_descriptor_sets(Rc::clone(&device), desc_layout.get_layout(), &mut desc_pool),
-            };
+        let camera_buffer = BufferState::new(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            &scene.camera_data(),
+        );
 
-            let camera_desc = (0..2).map(|_|{
-                let desc = camera_desc_layout.create_desc_set(&mut desc_pool);
+        let index_buffer = BufferState::new(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            &scene.mesh_data.indices,
+        );
+
+        let vertex_buffer = BufferState::new(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            &scene.mesh_data.positions,
+        );
+
+        let frame_descriptors = framebuffer.write_descriptor_sets(Rc::clone(&device), frame_desc_layout.get_layout(), &mut desc_pool);
+
+        let (camera_descriptors, index_descriptors, vertex_descriptors) = {
+
+            let camera_desc = (0..number_of_images).map(|_|{
+                let desc = camera_desc_layout.create_desc_set(&mut desc_pool, &camera_buffer.get_buffer());
                 desc
             }).collect::<Vec<_>>();
 
-            let indices_desc = (0..2).map(|_|{
-                let desc = indices_desc_layout.create_desc_set(&mut desc_pool);
+            let indices_desc = (0..number_of_images).map(|_|{
+                let desc = indices_desc_layout.create_desc_set(&mut desc_pool, &index_buffer.get_buffer());
                 desc
             }).collect::<Vec<_>>();
 
-            let vertices_desc = (0..2).map(|_|{
-                let desc = vertices_desc_layout.create_desc_set(&mut desc_pool);
+            let vertices_desc = (0..number_of_images).map(|_|{
+                let desc = vertices_desc_layout.create_desc_set(&mut desc_pool, &vertex_buffer.get_buffer());
                 desc
             }).collect::<Vec<_>>();
 
-            (descriptor, camera_desc, indices_desc, vertices_desc)
+            (camera_desc, indices_desc, vertices_desc)
         };
 
         let pipeline = PipelineState::new(
-            vec![desc_layout.get_layout(), camera_desc_layout.get_layout(), indices_desc_layout.get_layout(), vertices_desc_layout.get_layout()],
+            vec![frame_desc_layout.get_layout(), camera_desc_layout.get_layout(), indices_desc_layout.get_layout(), vertices_desc_layout.get_layout()],
             Rc::clone(&device),
             Path::new("shaders").join("raytracer.comp").as_path(),
         );
@@ -199,42 +219,6 @@ impl<B: Backend> RendererState<B> {
 
         println!("Memory types: {:?}", backend.adapter.memory_types);
 
-        let camera = camera_desc.into_iter().map(|d|{
-
-            let buffer = BufferState::new(
-                Rc::clone(&device),
-                &backend.adapter.memory_types,
-                &data,
-                d,
-                0,
-            );
-            buffer
-        }).collect::<Vec<_>>();
-
-        let indices = indices_desc.into_iter().map(|d|{
-
-            let uniform = BufferState::new(
-                Rc::clone(&device),
-                &backend.adapter.memory_types,
-                &scene.mesh_data.indices,
-                d,
-                0,
-            );
-            uniform
-        }).collect::<Vec<_>>();
-
-        let vertices = vertices_desc.into_iter().map(|d|{
-
-            let uniform = BufferState::new(
-                Rc::clone(&device),
-                &backend.adapter.memory_types,
-                &scene.mesh_data.positions,
-                d,
-                0,
-            );
-            uniform
-        }).collect::<Vec<_>>();
-
 
         RendererState{
             swapchain: Some(swapchain),
@@ -243,10 +227,13 @@ impl<B: Backend> RendererState<B> {
             window: window,
             pipeline: pipeline,
             framebuffer: framebuffer,
-            descriptor: descriptor,
-            camera: camera,
-            indices: indices,
-            vertices: vertices,
+            frame_descriptors,
+            camera_buffer,
+            camera_descriptors,
+            index_buffer,
+            index_descriptors,
+            vertex_buffer,
+            vertex_descriptors,
         }
 
     }
@@ -279,11 +266,9 @@ impl<B: Backend> RendererState<B> {
                 }
         };
 
+
         let data = scene.camera_data();
-
-        //self.uniform[frame as usize].buffer.take().unwrap().update_data(0, &data);
-
-        self.camera[frame as usize]
+        self.camera_buffer
             .update_data(0, &data);
 
         let (fid, sid) = self
@@ -319,10 +304,10 @@ impl<B: Backend> RendererState<B> {
                 self.pipeline.pipeline_layout.as_ref().unwrap(),
                 0,
                 vec!(
-                    &self.descriptor.descriptor_sets[frame as usize],
-                    self.camera[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
-                    self.indices[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
-                    self.vertices[frame as usize].desc.as_ref().unwrap().set.as_ref().unwrap(),
+                    &self.frame_descriptors[frame as usize],
+                    &self.camera_descriptors[frame as usize],
+                    &self.index_descriptors[frame as usize],
+                    &self.vertex_descriptors[frame as usize],
                 ),
                 &[]
             );

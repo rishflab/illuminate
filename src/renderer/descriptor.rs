@@ -6,9 +6,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 
-pub struct DescriptorState<B: Backend> {
-    pub descriptor_sets: Vec<B::DescriptorSet>,
-}
+//pub struct DescriptorState<B: Backend> {
+//    pub descriptor_sets: Vec<B::DescriptorSet>,
+//}
 
 pub struct DescSetLayout<B: Backend> {
     pub layout: Option<B::DescriptorSetLayout>,
@@ -19,7 +19,7 @@ impl<B: Backend> DescSetLayout<B> {
     pub unsafe fn new(
         device: Rc<RefCell<DeviceState<B>>>,
         bindings: Vec<pso::DescriptorSetLayoutBinding>,
-    ) -> Self {
+    ) -> DescSetLayout<B> {
 
         let desc_set_layout = device
             .borrow()
@@ -35,14 +35,26 @@ impl<B: Backend> DescSetLayout<B> {
         }
     }
 
-    pub unsafe fn create_desc_set(&self, desc_pool: &mut B::DescriptorPool) -> DescSet<B> {
+    pub unsafe fn create_desc_set(&self, desc_pool: &mut B::DescriptorPool, buffer: &B::Buffer) -> B::DescriptorSet {
+
         let desc_set = desc_pool
             .allocate_set(self.layout.as_ref().unwrap())
-            .unwrap();
-        DescSet {
-            //layout: self,
-            set: Some(desc_set),
-        }
+            .expect("could not allocate descriptor set");
+
+        self.device
+            .borrow()
+            .device
+            .write_descriptor_sets(Some(
+                pso::DescriptorSetWrite {
+                    set: &desc_set,
+                    binding: 0,
+                    array_offset: 0,
+                    descriptors: Some(pso::Descriptor::Buffer(buffer, None..None)),
+                }
+            ));
+
+        desc_set
+
     }
 
     pub fn get_layout(&self) -> &B::DescriptorSetLayout {
@@ -60,41 +72,59 @@ impl<B: Backend> Drop for DescSetLayout<B> {
 }
 
 
-pub struct DescSetWrite<W> {
-    pub binding: pso::DescriptorBinding,
-    pub array_offset: pso::DescriptorArrayIndex,
-    pub descriptors: W,
-}
+//pub struct DescSetWrite<W> {
+//    pub binding: pso::DescriptorBinding,
+//    pub array_offset: pso::DescriptorArrayIndex,
+//    pub descriptors: W,
+//}
 
-pub struct DescSet<B: Backend> {
-    pub set: Option<B::DescriptorSet>,
+//pub struct DescSet<B: Backend> {
+   // pub set: Option<B::DescriptorSet>,
     //pub layout: DescSetLayout<B>,
-}
+//}
 
 
-impl<B: Backend> DescSet<B> {
-    pub unsafe fn write_to_state<'a, 'b: 'a, W>(
-        &'b mut self,
-        write: Vec<DescSetWrite<W>>,
-        device: &mut B::Device,
-    ) where
-        W: IntoIterator,
-        W::Item: std::borrow::Borrow<pso::Descriptor<'a, B>>,
-    {
-        let set = self.set.as_ref().unwrap();
-        let write: Vec<_> = write
-            .into_iter()
-            .map(|d| pso::DescriptorSetWrite {
-                binding: d.binding,
-                array_offset: d.array_offset,
-                descriptors: d.descriptors,
-                set,
-            })
-            .collect();
-        device.write_descriptor_sets(write);
-    }
+//impl<B: Backend> DescSet<B> {
+//
+//pub unsafe fn write_to_state<'a, W, B>(
+//    set: &'a mut B::DescriptorSet,
+//    write: Vec<DescSetWrite<W>>,
+//    device: &mut B::Device,
+//) where
+//    B: Backend,
+//    W: IntoIterator,
+//    W::Item: std::borrow::Borrow<pso::Descriptor<'a, B>>,
+//{
+//    let write: Vec<_> = write
+//        .iter()
+//        .map(|d|
+//            pso::DescriptorSetWrite {
+//                binding: d.binding,
+//                array_offset: d.array_offset,
+//                descriptors: d.descriptors,
+//                set,
+//            }
+//        )
+//        .collect();
+//    device.write_descriptor_sets(write);
+//}
+
+//    pub unsafe fn bind_to_desc_set(&mut self, binding: u32){
+//
+//        desc.write_to_state(
+//            vec![DescSetWrite {
+//                binding: binding,
+//                array_offset: 0,
+//                descriptors: Some(pso::Descriptor::Buffer(
+//                    &buffer,
+//                    None..None,
+//                )),
+//            }],
+//            &self.device.borrow_mut().device,
+//        );
+//    }
 
     //pub fn get_layout(&self) -> &B::DescriptorSetLayout {
     //    self.layout.layout.as_ref().unwrap()
     //}
-}
+//}
