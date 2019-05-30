@@ -50,6 +50,7 @@ pub struct RendererState<B: Backend> {
     pub backend: BackendState<B>,
     pub window: WindowState,
     pub pipeline: PipelineState<B>,
+    //pub camera_rays_pipeline: PipelineState<B>,
     pub framebuffer: FramebufferState<B>,
     pub frame_descriptors: Vec<B::DescriptorSet>,
     pub camera_descriptors: Vec<B::DescriptorSet>,
@@ -127,7 +128,6 @@ impl<B: Backend> RendererState<B> {
         let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
         println!("created swap chain");
         let number_of_images = swapchain.number_of_images();
-
         println!("backbuffer size: {:?}", number_of_images);
 
         let mut desc_pool = device

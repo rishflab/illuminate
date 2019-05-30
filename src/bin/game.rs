@@ -27,6 +27,9 @@ fn main() {
 
     while running {
 
+        use std::time::Instant;
+
+
         match input.process_raw_input() {
             Some(command) => {
                 match command {
@@ -41,7 +44,12 @@ fn main() {
             None => (),
         }
 
+        let start = Instant::now();
 
         renderer_state.render(&scene);
+
+        let duration = start.elapsed();
+
+        println!("Frame time {:?}", duration);
     }
 }
