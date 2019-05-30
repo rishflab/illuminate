@@ -1,0 +1,64 @@
+#version 450
+//#extension GL_EXT_shader_16bit_storage
+
+#define EPSILON 0.0001
+#define M_PI 3.14159265359
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, rgba8) uniform writeonly image2D img;
+
+layout(set = 1,  binding = 0) buffer Camera {
+    mat4 view;
+    mat4 model;
+    vec4 color;
+
+};
+
+layout(set = 2, binding = 0) buffer Indices {
+    uint indices[];
+};
+
+layout(set = 3, binding = 0) buffer Vertices {
+    float vertices[];
+};
+
+struct Ray {
+    vec3 origin;
+    vec3 direction;
+};
+
+
+void model_world_transform(mat4 transform, inout vec3 v0, inout vec3 v1, inout vec3 v2){
+
+    v0 = (transform * vec4(v0, 1.0)).xyz;
+    v1 = (transform * vec4(v1, 1.0)).xyz;
+    v2 = (transform * vec4(v2, 1.0)).xyz;
+
+}
+
+void main() {
+
+    vec3 cam_origin = vec3(0.0, 0.0, 0.0);
+
+    mat4 view_mat = view;
+
+    vec2 raster_coord = gl_GlobalInvocationID.xy + vec2(0.5, 0.5);
+
+    vec2 norm_coords = raster_coord / vec2(800.0, 800.0);
+
+    vec2 screen_coord = vec2(-1.0, 1.0) + (vec2(2.0, -2.0) * norm_coords);
+
+    vec3 screen_ray_intersection = vec3(screen_coord, -1.0);
+
+    cam_origin = (view_mat * vec4(cam_origin, 1.0)).xyz;
+
+    screen_ray_intersection = (view_mat * vec4(screen_ray_intersection, 1.0)).xyz;
+
+    vec3 ray_direction = normalize(screen_ray_intersection - cam_origin);
+
+    Ray ray = Ray(cam_origin, ray_direction);
+
+
+}
+

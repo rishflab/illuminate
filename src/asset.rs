@@ -54,10 +54,10 @@ fn extract_data(buffer_data: &Vec<Vec<u8>>, views: &Vec<View>, accessor: &Access
             let offset = accessor.view().offset() + accessor.offset();
             let mut data: Vec<u8> = buffer[offset..(offset + accessor.size() * accessor.count())].to_vec();
             println!("{:?}", data.len());
-            println!("{:?}", data);
+            //println!("{:?}", data);
             let bytes = bytes_to_u32(data, 2);
             println!("{:?}", bytes.len());
-            println!("{:?}", bytes);
+            //println!("{:?}", bytes);
             u32_to_bytes(bytes)
         },
         _ => {
@@ -65,10 +65,10 @@ fn extract_data(buffer_data: &Vec<Vec<u8>>, views: &Vec<View>, accessor: &Access
             let mut data: Vec<u8> = buffer[offset..(offset + accessor.size() * accessor.count())].to_vec();
             let clone = data.clone();
             println!("{:?}", data.len());
-            println!("{:?}", data);
+            //println!("{:?}", data);
             let bytes = bytes_to_f32(clone, 4);
             println!("{:?}", bytes.len());
-            println!("{:?}", bytes);
+            //println!("{:?}", bytes);
 
             data
         },
@@ -148,7 +148,7 @@ pub fn mesh_data_from_gltf(gltf: &gltf::Gltf, dir: &str) -> MeshData {
         }).collect();
 
     println!("buffer count: {:?}", buffers.len());
-    println!("{:?}", buffers);
+    //println!("{:?}", buffers);
 
 
 

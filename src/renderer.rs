@@ -36,6 +36,7 @@ use gfx_hal::{command, Submission};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::iter;
+use std::path::Path;
 use crate::renderer::descriptor::DescriptorState;
 
 const ENTRY_NAME: &str = "main";
@@ -190,6 +191,7 @@ impl<B: Backend> RendererState<B> {
         let pipeline = PipelineState::new(
             vec![desc_layout.get_layout(), camera_desc_layout.get_layout(), indices_desc_layout.get_layout(), vertices_desc_layout.get_layout()],
             Rc::clone(&device),
+            Path::new("shaders").join("raytracer.comp").as_path(),
         );
 
         let data = scene.camera_data();
@@ -329,6 +331,7 @@ impl<B: Backend> RendererState<B> {
                 &[]
             );
             cmd_buffer.dispatch([800, 800, 1]);
+
             cmd_buffer.finish();
 
 

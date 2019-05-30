@@ -5,6 +5,7 @@ use std::fs;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::io::Read;
+use std::path::Path;
 
 pub struct PipelineState<B: Backend> {
     pub pipeline: Option<B::ComputePipeline>,
@@ -13,9 +14,11 @@ pub struct PipelineState<B: Backend> {
 }
 
 impl<B: Backend> PipelineState<B> {
+
     pub unsafe fn new<IS>(
         desc_layouts: IS,
         device_ptr: Rc<RefCell<DeviceState<B>>>,
+        path: &Path
     ) -> Self
         where
             IS: IntoIterator,
@@ -28,15 +31,15 @@ impl<B: Backend> PipelineState<B> {
             .expect("Can't create pipeline layout");
 
         let shader = {
-            let glsl = fs::read_to_string("shaders/transfer_vertices.comp").unwrap();
+            let glsl = fs::read_to_string(path).unwrap();
             let spirv: Vec<u8> = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute)
                 .unwrap()
                 .bytes()
                 .map(|b| b.unwrap())
                 .collect();
-            device.create_shader_module(&spirv).unwrap()
+            device.create_shader_module(&spirv).expect("Could not load shader module")
         };
-
+        
         let pipeline = {
             let comp_entry = pso::EntryPoint::<B> {
                 entry: crate::renderer::ENTRY_NAME,
