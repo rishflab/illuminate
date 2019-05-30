@@ -59,16 +59,18 @@ impl<B: Backend> Drop for DescSetLayout<B> {
     }
 }
 
-pub struct DescSet<B: Backend> {
-    pub set: Option<B::DescriptorSet>,
-    //pub layout: DescSetLayout<B>,
-}
 
 pub struct DescSetWrite<W> {
     pub binding: pso::DescriptorBinding,
     pub array_offset: pso::DescriptorArrayIndex,
     pub descriptors: W,
 }
+
+pub struct DescSet<B: Backend> {
+    pub set: Option<B::DescriptorSet>,
+    //pub layout: DescSetLayout<B>,
+}
+
 
 impl<B: Backend> DescSet<B> {
     pub unsafe fn write_to_state<'a, 'b: 'a, W>(

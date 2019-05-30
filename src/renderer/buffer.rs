@@ -1,4 +1,4 @@
-use gfx_hal::{Backend, Device, MemoryType, buffer, memory as m};
+use gfx_hal::{Backend, Device, pso, MemoryType, buffer, memory as m};
 
 use super::device::DeviceState;
 
@@ -6,7 +6,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use core::mem::size_of;
 
+use super::descriptor::{DescSet, DescSetWrite};
+
+
+
+
 pub struct BufferState<B: Backend> {
+    pub desc: Option<DescSet<B>>,
     pub memory: Option<B::Memory>,
     pub buffer: Option<B::Buffer>,
     pub device: Rc<RefCell<DeviceState<B>>>,
@@ -19,11 +25,53 @@ impl<B: Backend> BufferState<B> {
     }
 
     pub unsafe fn new<T>(
+        device: Rc<RefCell<DeviceState<B>>>,
+        memory_types: &[MemoryType],
+        data: &[T],
+        mut desc: DescSet<B>,
+        //layout: &B::DescriptorSetLayout,
+        binding: u32,
+    ) -> Self
+        where
+            T: Copy,
+    {
+        let (buffer, memory, size) = BufferState::init_data(
+            Rc::clone(&device),
+            &data,
+            buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE,
+            memory_types,
+        );
+
+        //let buffer = Some(buffer);
+
+        desc.write_to_state(
+            vec![DescSetWrite {
+                binding: binding,
+                array_offset: 0,
+                descriptors: Some(pso::Descriptor::Buffer(
+                    &buffer,
+                    None..None,
+                )),
+            }],
+            &mut device.borrow_mut().device,
+        );
+
+        BufferState {
+            desc: Some(desc),
+            memory: Some(memory),
+            buffer: Some(buffer),
+            device: device,
+            size,
+        }
+    }
+
+
+    unsafe fn init_data<T>(
         device_ptr: Rc<RefCell<DeviceState<B>>>,
         data_source: &[T],
         usage: buffer::Usage,
         memory_types: &[MemoryType],
-    ) -> Self
+    ) -> (B::Buffer, B::Memory, u64)
         where
             T: Copy,
     {
@@ -73,15 +121,14 @@ impl<B: Backend> BufferState<B> {
         }
 
         println!("memory written");
-        BufferState {
-            memory: Some(memory),
-            buffer: Some(buffer),
-            device: device_ptr,
-            size,
-        }
+
+        (buffer, memory, size)
+
     }
 
-    pub fn update_data<T>(&mut self, offset: u64, data_source: &[T])
+    pub fn update_data<T>(
+        &mut self, offset:
+        u64, data_source: &[T])
         where
             T: Copy,
     {

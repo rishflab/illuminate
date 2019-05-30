@@ -10,7 +10,6 @@ pub mod pipeline;
 pub mod buffer;
 pub mod descriptor;
 pub mod framebuffer;
-pub mod uniform;
 pub mod scene;
 
 extern crate nalgebra_glm as glm;
@@ -22,7 +21,7 @@ use self::swapchain::SwapchainState;
 use self::pipeline::PipelineState;
 use self::descriptor::DescSetLayout;
 use self::framebuffer::FramebufferState;
-use self::uniform::Uniform;
+use self::buffer::BufferState;
 use self::scene::Scene;
 
 use gfx_hal::{Backend, format, image};
@@ -55,9 +54,9 @@ pub struct RendererState<B: Backend> {
     pub pipeline: PipelineState<B>,
     pub framebuffer: FramebufferState<B>,
     pub descriptor: DescriptorState<B>,
-    pub camera: Vec<Uniform<B>>,
-    pub indices: Vec<Uniform<B>>,
-    pub vertices: Vec<Uniform<B>>,
+    pub camera: Vec<BufferState<B>>,
+    pub indices: Vec<BufferState<B>>,
+    pub vertices: Vec<BufferState<B>>,
 }
 
 impl<B: Backend> RendererState<B> {
@@ -202,19 +201,19 @@ impl<B: Backend> RendererState<B> {
 
         let camera = camera_desc.into_iter().map(|d|{
 
-            let uniform = Uniform::new(
+            let buffer = BufferState::new(
                 Rc::clone(&device),
                 &backend.adapter.memory_types,
                 &data,
                 d,
                 0,
             );
-            uniform
+            buffer
         }).collect::<Vec<_>>();
 
         let indices = indices_desc.into_iter().map(|d|{
 
-            let uniform = Uniform::new(
+            let uniform = BufferState::new(
                 Rc::clone(&device),
                 &backend.adapter.memory_types,
                 &scene.mesh_data.indices,
@@ -226,7 +225,7 @@ impl<B: Backend> RendererState<B> {
 
         let vertices = vertices_desc.into_iter().map(|d|{
 
-            let uniform = Uniform::new(
+            let uniform = BufferState::new(
                 Rc::clone(&device),
                 &backend.adapter.memory_types,
                 &scene.mesh_data.positions,
@@ -285,9 +284,6 @@ impl<B: Backend> RendererState<B> {
         //self.uniform[frame as usize].buffer.take().unwrap().update_data(0, &data);
 
         self.camera[frame as usize]
-            .buffer
-            .as_mut()
-            .unwrap()
             .update_data(0, &data);
 
         let (fid, sid) = self
