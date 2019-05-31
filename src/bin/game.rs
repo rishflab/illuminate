@@ -1,6 +1,6 @@
 extern crate blackhole;
 
-use blackhole::renderer::RendererState;
+use blackhole::renderer::basic::BasicPathtracer;
 use blackhole::renderer::window::WindowState;
 use blackhole::renderer::backend::{create_backend};
 use blackhole::input::{InputState, Command};
@@ -11,7 +11,7 @@ fn main() {
     env_logger::init();
 
     let asset_folder = "assets";
-    let gltf = load_gltf(asset_folder, "Box.gltf").expect("failed to load gltf");
+    let gltf = load_gltf(asset_folder, "untitled.gltf").expect("failed to load gltf");
     let mesh_data = mesh_data_from_gltf(&gltf, asset_folder);
 
     let mut scene = Scene::new(mesh_data);
@@ -20,7 +20,9 @@ fn main() {
     let mut input = InputState::new();
     let (backend, _instance) = create_backend(&mut window, &mut input);
 
-    let mut renderer_state = unsafe { RendererState::new(backend, window, &scene) };
+    let mut renderer = unsafe {
+        BasicPathtracer::new(backend, window, &scene)
+    };
 
     let mut running = true;
 
@@ -46,7 +48,7 @@ fn main() {
 
         let start = Instant::now();
 
-        renderer_state.render(&scene);
+        renderer.render(&scene);
 
         let duration = start.elapsed();
 

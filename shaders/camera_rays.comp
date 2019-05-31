@@ -3,38 +3,33 @@
 #define EPSILON 0.0001
 #define M_PI 3.14159265359
 
-layout(set = 1,  binding = 0) buffer Camera {
-    mat4 view;
-    mat4 model;
-    vec4 color;
-};
-
-layout(set = 1,  binding = 0) buffer Rays {
-    Ray rays[800][800];
-};
-
 struct Ray {
     vec3 origin;
     vec3 direction;
 };
 
+layout(binding = 0) uniform Camera {
+    mat4 view;
+};
+
+layout(std430,  binding = 0) buffer Rays {
+    Ray rays[800][800];
+};
+
+
 void main() {
-
-    vec3 cam_origin = vec3(0.0, 0.0, 0.0);
-
-    mat4 view_mat = view;
 
     vec2 raster_coord = gl_GlobalInvocationID.xy + vec2(0.5, 0.5);
 
-    vec2 norm_coords = raster_coord / vec2(800.0, 800.0);
+    vec2 norm_coords = raster_coord / vec2(800, 800);
 
     vec2 screen_coord = vec2(-1.0, 1.0) + (vec2(2.0, -2.0) * norm_coords);
 
     vec3 screen_ray_intersection = vec3(screen_coord, -1.0);
 
-    cam_origin = (view_mat * vec4(cam_origin, 1.0)).xyz;
+    vec3 cam_origin = (view * vec4(0.0)).xyz;
 
-    screen_ray_intersection = (view_mat * vec4(screen_ray_intersection, 1.0)).xyz;
+    screen_ray_intersection = (view * vec4(screen_ray_intersection, 1.0)).xyz;
 
     vec3 ray_direction = normalize(screen_ray_intersection - cam_origin);
 

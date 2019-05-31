@@ -8,27 +8,30 @@ use std::rc::Rc;
 use std::io::Read;
 use std::path::Path;
 use crate::renderer::ENTRY_NAME;
+use crate::renderer::device::DeviceState;
 
 pub struct CameraRays<B: Backend> {
     pub shader: B::ShaderModule,
     pub set_layout: B::DescriptorSetLayout,
     pub layout: B::PipelineLayout,
     pub pipeline: B::ComputePipeline,
-    pub desc_sets: Vec<B::DescriptorSet>,
+    pub desc_set: B::DescriptorSet,
     pub pool: B::DescriptorPool,
 }
 
 impl<B: Backend> CameraRays<B> {
 
-    pub unsafe fn new(device: &mut B::Device) -> Self {
+    pub unsafe fn new(device_state: Rc<RefCell<DeviceState<B>>>,) -> Self {
 
-        let backbuffer_size = 1;
+        let device = &device_state
+            .borrow()
+            .device;
 
         let shader = {
             let path = Path::new("shaders").join("camera_rays.comp");
             let glsl = fs::read_to_string(path.as_path()).unwrap();
             let spirv: Vec<u8> = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute)
-                .unwrap()
+                .expect("Could not compile shader")
                 .bytes()
                 .map(|b| b.unwrap())
                 .collect();
@@ -36,7 +39,7 @@ impl<B: Backend> CameraRays<B> {
         };
 
         let set_layout = device.create_descriptor_set_layout(
-            vec![
+            &[
                 pso::DescriptorSetLayoutBinding {
                     binding: 0,
                     ty: pso::DescriptorType::UniformBuffer,
@@ -57,27 +60,24 @@ impl<B: Backend> CameraRays<B> {
         ).expect("Camera ray set layout creation failed");;
 
         let mut pool = device.create_descriptor_pool(
-            backbuffer_size * 1,
+            2,
             &[
                 pso::DescriptorRangeDesc {
-                    ty: pso::DescriptorType::StorageBuffer,
-                    count: backbuffer_size * 1,
+                    ty: pso::DescriptorType::UniformBuffer,
+                    count: 1,
                 },
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageBuffer,
-                    count: backbuffer_size * 1,
+                    count:
+                    1,
                 },
             ],
             pso::DescriptorPoolCreateFlags::empty(),
         ).expect("Camera ray descriptor pool creation failed");;
 
 
-        let desc_sets = [0..backbuffer_size]
-            .iter()
-            .map(|_|{
-                pool.allocate_set(&set_layout).expect("Camera ray set allocation failed")
-            })
-            .collect();
+        let desc_set = pool.allocate_set(&set_layout).expect("Camera ray set allocation failed");
+
 
         let layout = device.create_pipeline_layout(Some(&set_layout), &[])
             .expect("Camera ray pipeline layout creation failed");
@@ -102,7 +102,7 @@ impl<B: Backend> CameraRays<B> {
             set_layout,
             pool,
             layout,
-            desc_sets,
+            desc_set,
             pipeline,
         }
     }
