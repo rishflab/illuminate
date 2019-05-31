@@ -53,9 +53,9 @@ pub struct RendererState<B: Backend> {
     pub pipeline: PipelineState<B>,
     pub framebuffer: FramebufferState<B>,
     pub frame_descriptors: Vec<B::DescriptorSet>,
-    pub camera_descriptors: Vec<B::DescriptorSet>,
-    pub index_descriptors: Vec<B::DescriptorSet>,
-    pub vertex_descriptors: Vec<B::DescriptorSet>,
+    pub camera_descriptor: B::DescriptorSet,
+    pub index_descriptor: B::DescriptorSet,
+    pub vertex_descriptor: B::DescriptorSet,
     pub camera_buffer: BufferState<B>,
     pub index_buffer: BufferState<B>,
     pub vertex_buffer: BufferState<B>,
@@ -130,29 +130,30 @@ impl<B: Backend> RendererState<B> {
         let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
         println!("created swap chain");
         let number_of_images = swapchain.number_of_images();
+        //let number_of_images = 1;
         println!("backbuffer size: {:?}", number_of_images);
 
         let mut desc_pool = device
             .borrow()
             .device
             .create_descriptor_pool(
-                4 * number_of_images, // # of sets
+                5,
                 &[
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::StorageImage,
-                        count: 1 * number_of_images,
+                        count: number_of_images,
                     },
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::UniformBuffer,
-                        count: 1 * number_of_images,
+                        count: 1,
                     },
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::UniformBuffer,
-                        count: 1 * number_of_images,
+                        count: 1,
                     },
                     pso::DescriptorRangeDesc {
                         ty: pso::DescriptorType::UniformBuffer,
-                        count: 1 * number_of_images,
+                        count: 1,
                     },
                 ],
                 pso::DescriptorPoolCreateFlags::empty(),
@@ -189,22 +190,13 @@ impl<B: Backend> RendererState<B> {
 
         let frame_descriptors = framebuffer.write_descriptor_sets(Rc::clone(&device), frame_desc_layout.get_layout(), &mut desc_pool);
 
-        let (camera_descriptors, index_descriptors, vertex_descriptors) = {
+        let (camera_descriptor, index_descriptor, vertex_descriptor) = {
 
-            let camera_desc = (0..number_of_images).map(|_|{
-                let desc = camera_desc_layout.create_desc_set(&mut desc_pool, &camera_buffer.get_buffer());
-                desc
-            }).collect::<Vec<_>>();
+            let camera_desc = camera_desc_layout.create_desc_set(&mut desc_pool, &camera_buffer.get_buffer());
 
-            let indices_desc = (0..number_of_images).map(|_|{
-                let desc = indices_desc_layout.create_desc_set(&mut desc_pool, &index_buffer.get_buffer());
-                desc
-            }).collect::<Vec<_>>();
+            let indices_desc = indices_desc_layout.create_desc_set(&mut desc_pool, &index_buffer.get_buffer());
 
-            let vertices_desc = (0..number_of_images).map(|_|{
-                let desc = vertices_desc_layout.create_desc_set(&mut desc_pool, &vertex_buffer.get_buffer());
-                desc
-            }).collect::<Vec<_>>();
+            let vertices_desc = vertices_desc_layout.create_desc_set(&mut desc_pool, &vertex_buffer.get_buffer());
 
             (camera_desc, indices_desc, vertices_desc)
         };
@@ -231,11 +223,11 @@ impl<B: Backend> RendererState<B> {
             framebuffer: framebuffer,
             frame_descriptors,
             camera_buffer,
-            camera_descriptors,
+            camera_descriptor,
             index_buffer,
-            index_descriptors,
+            index_descriptor,
             vertex_buffer,
-            vertex_descriptors,
+            vertex_descriptor,
         }
 
     }
@@ -307,9 +299,9 @@ impl<B: Backend> RendererState<B> {
                 0,
                 vec!(
                     &self.frame_descriptors[frame as usize],
-                    &self.camera_descriptors[frame as usize],
-                    &self.index_descriptors[frame as usize],
-                    &self.vertex_descriptors[frame as usize],
+                    &self.camera_descriptor,
+                    &self.index_descriptor,
+                    &self.vertex_descriptor,
                 ),
                 &[]
             );

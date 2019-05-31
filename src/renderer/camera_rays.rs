@@ -22,7 +22,7 @@ impl<B: Backend> CameraRays<B> {
 
     pub unsafe fn new(device: &mut B::Device) -> Self {
 
-        let backbuffer_size = 2;
+        let backbuffer_size = 1;
 
         let shader = {
             let path = Path::new("shaders").join("camera_rays.comp");
@@ -36,19 +36,33 @@ impl<B: Backend> CameraRays<B> {
         };
 
         let set_layout = device.create_descriptor_set_layout(
-            vec![pso::DescriptorSetLayoutBinding {
-                binding: 0,
-                ty: pso::DescriptorType::StorageBuffer,
-                count: 1,
-                stage_flags: pso::ShaderStageFlags::COMPUTE,
-                immutable_samplers: false,
-            }],
+            vec![
+                pso::DescriptorSetLayoutBinding {
+                    binding: 0,
+                    ty: pso::DescriptorType::UniformBuffer,
+                    count: 1,
+                    stage_flags: pso::ShaderStageFlags::COMPUTE,
+                    immutable_samplers: false,
+                },
+                pso::DescriptorSetLayoutBinding {
+                    binding: 1,
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: 1,
+                    stage_flags: pso::ShaderStageFlags::COMPUTE,
+                    immutable_samplers: false,
+                },
+
+            ],
             &[],
         ).expect("Camera ray set layout creation failed");;
 
         let mut pool = device.create_descriptor_pool(
             backbuffer_size * 1,
             &[
+                pso::DescriptorRangeDesc {
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: backbuffer_size * 1,
+                },
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageBuffer,
                     count: backbuffer_size * 1,
