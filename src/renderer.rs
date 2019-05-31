@@ -11,6 +11,7 @@ pub mod buffer;
 pub mod descriptor;
 pub mod framebuffer;
 pub mod scene;
+pub mod camera_rays;
 
 extern crate nalgebra_glm as glm;
 
@@ -50,7 +51,6 @@ pub struct RendererState<B: Backend> {
     pub backend: BackendState<B>,
     pub window: WindowState,
     pub pipeline: PipelineState<B>,
-    //pub camera_rays_pipeline: PipelineState<B>,
     pub framebuffer: FramebufferState<B>,
     pub frame_descriptors: Vec<B::DescriptorSet>,
     pub camera_descriptors: Vec<B::DescriptorSet>,
@@ -73,7 +73,8 @@ impl<B: Backend> RendererState<B> {
         )));
 
 
-        let (frame_desc_layout, camera_desc_layout, indices_desc_layout, vertices_desc_layout) = {
+        let (frame_desc_layout, camera_desc_layout,
+            indices_desc_layout, vertices_desc_layout) = {
 
             let frame_desc_layout = DescSetLayout::new(
                 Rc::clone(&device),
@@ -98,6 +99,7 @@ impl<B: Backend> RendererState<B> {
                     immutable_samplers: false,
                 }],
             );
+
 
             let indices_desc = DescSetLayout::new(
                 Rc::clone(&device),

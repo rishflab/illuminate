@@ -6,7 +6,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use core::mem::size_of;
 
-//use super::descriptor::{DescSetWrite};
 
 pub struct BufferState<B: Backend> {
     //pub desc: Option<DescSet<B>>,
