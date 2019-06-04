@@ -9,7 +9,6 @@ use crate::renderer::framebuffer::FramebufferState;
 use crate::renderer::buffer::BufferState;
 use crate::renderer::scene::Scene;
 use crate::renderer::descriptor::DescSetLayout;
-use crate::renderer::camera_rays::CameraRays;
 use crate::renderer::Renderer;
 
 use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image};
@@ -24,8 +23,8 @@ pub struct BasicPathtracer<B: Backend> {
     pub device: Rc<RefCell<DeviceState<B>>>,
     pub backend: BackendState<B>,
     pub window: WindowState,
-    pub pipeline: PipelineState<B>,
     pub framebuffer: FramebufferState<B>,
+    pub pipeline: PipelineState<B>,
     pub frame_descriptors: Vec<B::DescriptorSet>,
     pub camera_descriptor: B::DescriptorSet,
     pub index_descriptor: B::DescriptorSet,
@@ -71,7 +70,7 @@ impl<B: Backend> BasicPathtracer<B> {
         println!("created framebuffer");
 
 
-        let camera_rays_stage = CameraRays::new(Rc::clone(&device));
+        //let camera_rays_stage = CameraRays::new(Rc::clone(&device));
 
         let (frame_desc_layout, camera_desc_layout,
             indices_desc_layout, vertices_desc_layout) = {

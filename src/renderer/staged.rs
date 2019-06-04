@@ -1,5 +1,3 @@
-extern crate nalgebra_glm as glm;
-
 use crate::renderer::window::WindowState;
 use crate::renderer::backend::BackendState;
 use crate::renderer::device::DeviceState;
@@ -9,10 +7,12 @@ use crate::renderer::framebuffer::FramebufferState;
 use crate::renderer::buffer::BufferState;
 use crate::renderer::scene::Scene;
 use crate::renderer::descriptor::DescSetLayout;
-use crate::renderer::camera_rays::CameraRays;
+use crate::renderer::camera_ray_generator::CameraRayGenerator;
+use crate::renderer::ray_triangle_intersector::RayTriangleIntersector;
 use crate::renderer::Renderer;
+use super::types::Ray;
 
-use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image};
+use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -24,15 +24,13 @@ pub struct StagedPathtracer<B: Backend> {
     pub device: Rc<RefCell<DeviceState<B>>>,
     pub backend: BackendState<B>,
     pub window: WindowState,
-    pub pipeline: PipelineState<B>,
     pub framebuffer: FramebufferState<B>,
-    pub frame_descriptors: Vec<B::DescriptorSet>,
-    pub camera_descriptor: B::DescriptorSet,
-    pub index_descriptor: B::DescriptorSet,
-    pub vertex_descriptor: B::DescriptorSet,
+    pub camera_ray_generator: CameraRayGenerator<B>,
+    pub ray_triangle_intersector: RayTriangleIntersector<B>,
     pub camera_buffer: BufferState<B>,
-    pub index_buffer: BufferState<B>,
+    pub ray_buffer: BufferState<B>,
     pub vertex_buffer: BufferState<B>,
+    pub index_buffer: BufferState<B>,
 }
 
 impl<B: Backend> StagedPathtracer<B> {
@@ -49,7 +47,6 @@ impl<B: Backend> StagedPathtracer<B> {
         let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
         println!("created swap chain");
 
-
         let number_of_images = swapchain.number_of_images();
         println!("backbuffer size: {:?}", number_of_images);
 
@@ -59,98 +56,24 @@ impl<B: Backend> StagedPathtracer<B> {
         );
         println!("created framebuffer");
 
+        let camera_ray_generator = CameraRayGenerator::new(Rc::clone(&device));
 
-        let camera_rays_stage = CameraRays::new(Rc::clone(&device));
-
-        let (frame_desc_layout, camera_desc_layout,
-            indices_desc_layout, vertices_desc_layout) = {
-            let frame_desc_layout = DescSetLayout::new(
-                Rc::clone(&device),
-                vec![
-                    pso::DescriptorSetLayoutBinding {
-                        binding: 0,
-                        ty: pso::DescriptorType::StorageImage,
-                        count: 1,
-                        stage_flags: pso::ShaderStageFlags::COMPUTE,
-                        immutable_samplers: false,
-                    },
-                ],
-            );
-
-            let camera_desc = DescSetLayout::new(
-                Rc::clone(&device),
-                vec![pso::DescriptorSetLayoutBinding {
-                    binding: 0,
-                    ty: pso::DescriptorType::StorageBuffer,
-                    count: 1,
-                    stage_flags: pso::ShaderStageFlags::COMPUTE,
-                    immutable_samplers: false,
-                }],
-            );
-
-
-            let indices_desc = DescSetLayout::new(
-                Rc::clone(&device),
-                vec![pso::DescriptorSetLayoutBinding {
-                    binding: 0,
-                    ty: pso::DescriptorType::StorageBuffer,
-                    count: 1,
-                    stage_flags: pso::ShaderStageFlags::COMPUTE,
-                    immutable_samplers: false,
-                }],
-            );
-
-            let vertices_desc = DescSetLayout::new(
-                Rc::clone(&device),
-                vec![pso::DescriptorSetLayoutBinding {
-                    binding: 0,
-                    ty: pso::DescriptorType::StorageBuffer,
-                    count: 1,
-                    stage_flags: pso::ShaderStageFlags::COMPUTE,
-                    immutable_samplers: false,
-                }],
-            );
-
-
-            (frame_desc_layout, camera_desc, indices_desc, vertices_desc)
-        };
-
-        let mut desc_pool = device
-            .borrow()
-            .device
-            .create_descriptor_pool(
-                5,
-                &[
-                    pso::DescriptorRangeDesc {
-                        ty: pso::DescriptorType::StorageImage,
-                        count: number_of_images,
-                    },
-                    pso::DescriptorRangeDesc {
-                        ty: pso::DescriptorType::UniformBuffer,
-                        count: 1,
-                    },
-                    pso::DescriptorRangeDesc {
-                        ty: pso::DescriptorType::UniformBuffer,
-                        count: 1,
-                    },
-                    pso::DescriptorRangeDesc {
-                        ty: pso::DescriptorType::UniformBuffer,
-                        count: 1,
-                    },
-                ],
-                pso::DescriptorPoolCreateFlags::empty(),
-            )
-            .expect("Could not create descriptor pool");
-
-        println!("created desc pool");
-
-
-
+        let ray_triangle_intersector = RayTriangleIntersector::new(Rc::clone(&device));
 
         let camera_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             &scene.camera_data(),
+        );
+
+        let ray_buffer = BufferState::new_empty(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            800*800,
+            Ray{
+                origin: glm::vec3(0.0, 0.0, 0.0),
+                direction: glm::vec3(0.0, 0.0, 0.0,),
+            }
         );
 
         let index_buffer = BufferState::new(
@@ -162,34 +85,23 @@ impl<B: Backend> StagedPathtracer<B> {
         let vertex_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
+
             &scene.mesh_data.positions,
         );
 
-        let frame_descriptors = framebuffer.write_descriptor_sets(Rc::clone(&device), frame_desc_layout.get_layout(), &mut desc_pool);
+        camera_ray_generator.write_desc_set(Rc::clone(&device), camera_buffer.get_buffer(), ray_buffer.get_buffer());
 
-        let (camera_descriptor, index_descriptor, vertex_descriptor) = {
-
-            let camera_desc = camera_desc_layout.create_desc_set(&mut desc_pool, &camera_buffer.get_buffer());
-
-            let indices_desc = indices_desc_layout.create_desc_set(&mut desc_pool, &index_buffer.get_buffer());
-
-            let vertices_desc = vertices_desc_layout.create_desc_set(&mut desc_pool, &vertex_buffer.get_buffer());
-
-            (camera_desc, indices_desc, vertices_desc)
-        };
-
-
-        let pipeline = PipelineState::new(
-            vec![frame_desc_layout.get_layout(), camera_desc_layout.get_layout(), indices_desc_layout.get_layout(), vertices_desc_layout.get_layout()],
+        ray_triangle_intersector.write_frame_desc_sets(
             Rc::clone(&device),
-            Path::new("shaders").join("raytracer.comp").as_path(),
+            framebuffer.get_image_views()
         );
 
-        let data = scene.camera_data();
-
-        println!("view mat: {:?}", data);
-
-        println!("Memory types: {:?}", backend.adapter.memory_types);
+        ray_triangle_intersector.write_desc_set(
+            Rc::clone(&device),
+            ray_buffer.get_buffer(),
+            vertex_buffer.get_buffer(),
+            index_buffer.get_buffer()
+        );
 
 
         StagedPathtracer {
@@ -197,21 +109,17 @@ impl<B: Backend> StagedPathtracer<B> {
             device: device,
             backend: backend,
             window: window,
-            pipeline: pipeline,
             framebuffer: framebuffer,
-            frame_descriptors,
+            camera_ray_generator,
+            ray_triangle_intersector,
             camera_buffer,
-            camera_descriptor,
+            ray_buffer,
             index_buffer,
-            index_descriptor,
             vertex_buffer,
-            vertex_descriptor,
         }
-
     }
 
     pub fn render(&mut self, scene: &Scene) {
-
 
         let sem_index = self.framebuffer.next_acq_pre_pair_index();
 
@@ -238,7 +146,6 @@ impl<B: Backend> StagedPathtracer<B> {
                 }
         };
 
-
         let data = scene.camera_data();
         self.camera_buffer
             .update_data(0, &data);
@@ -262,22 +169,29 @@ impl<B: Backend> StagedPathtracer<B> {
                 .reset_fence(framebuffer_fence)
                 .unwrap();
 
-
             command_pool.reset();
-
 
             let mut cmd_buffer = command_pool.acquire_command_buffer::<command::OneShot>();
 
             cmd_buffer.begin();
-            cmd_buffer.bind_compute_pipeline(self.pipeline.pipeline.as_ref().unwrap());
+            cmd_buffer.bind_compute_pipeline(&self.camera_ray_generator.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
-                self.pipeline.pipeline_layout.as_ref().unwrap(),
+                &self.camera_ray_generator.layout,
                 0,
                 vec!(
-                    &self.frame_descriptors[frame as usize],
-                    &self.camera_descriptor,
-                    &self.index_descriptor,
-                    &self.vertex_descriptor,
+                    &self.camera_ray_generator.desc_set
+                ),
+                &[]
+            );
+            cmd_buffer.dispatch([800, 800, 1]);
+
+            cmd_buffer.bind_compute_pipeline(&self.ray_triangle_intersector.pipeline);
+            cmd_buffer.bind_compute_descriptor_sets(
+                &self.ray_triangle_intersector.layout,
+                0,
+                vec!(
+                    &self.ray_triangle_intersector.frame_desc_sets[frame as usize],
+                    &self.ray_triangle_intersector.desc_set
                 ),
                 &[]
             );

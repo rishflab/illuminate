@@ -1,6 +1,7 @@
 extern crate blackhole;
 
 use blackhole::renderer::basic::BasicPathtracer;
+use blackhole::renderer::staged::StagedPathtracer;
 use blackhole::renderer::window::WindowState;
 use blackhole::renderer::backend::{create_backend};
 use blackhole::input::{InputState, Command};
@@ -21,7 +22,7 @@ fn main() {
     let (backend, _instance) = create_backend(&mut window, &mut input);
 
     let mut renderer = unsafe {
-        BasicPathtracer::new(backend, window, &scene)
+        StagedPathtracer::new(backend, window, &scene)
     };
 
     let mut running = true;

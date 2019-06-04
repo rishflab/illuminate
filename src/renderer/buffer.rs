@@ -20,17 +20,52 @@ impl<B: Backend> BufferState<B> {
         self.buffer.as_ref().unwrap()
     }
 
-    pub fn bind_to_descriptor(&self, desc: B::DescriptorSet){
+    pub unsafe fn new_empty<T>(device_ptr: Rc<RefCell<DeviceState<B>>>, memory_types: &[MemoryType], len: u64, t: T) -> Self{
 
+        let (memory, buffer, size) = {
+
+            let device = &device_ptr.borrow().device;
+
+            let stride = size_of::<T>() as u64;
+            let upload_size = len as u64 * stride;
+
+            let mut buffer = device.create_buffer(
+                upload_size,
+                buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE)
+                .unwrap();
+
+            let mem_req = device.get_buffer_requirements(&buffer);
+
+            let upload_type = memory_types
+                .iter()
+                .enumerate()
+                .position(|(id, mem_type)| {
+                    mem_req.type_mask & (1 << id) != 0
+                        && mem_type.properties.contains(m::Properties::DEVICE_LOCAL | m::Properties::CPU_VISIBLE | m::Properties::COHERENT)
+                })
+                .unwrap()
+                .into();
+
+            let mut memory = device.allocate_memory(upload_type, mem_req.size).unwrap();
+
+            device.bind_buffer_memory(&memory, 0, &mut buffer).unwrap();
+
+            (memory, buffer, mem_req.size)
+
+        };
+
+        BufferState {
+            memory: Some(memory),
+            buffer: Some(buffer),
+            device: device_ptr,
+            size: size,
+        }
     }
 
     pub unsafe fn new<T>(
         device: Rc<RefCell<DeviceState<B>>>,
         memory_types: &[MemoryType],
         data: &[T],
-        //mut desc: DescSet<B>,
-        //layout: &B::DescriptorSetLayout,
-        //binding: u32,
     ) -> Self
         where
             T: Copy,
@@ -44,7 +79,6 @@ impl<B: Backend> BufferState<B> {
 
 
         BufferState {
-            //desc: Some(desc),
             memory: Some(memory),
             buffer: Some(buffer),
             device: device,

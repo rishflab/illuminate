@@ -7,9 +7,11 @@ pub mod buffer;
 pub mod descriptor;
 pub mod framebuffer;
 pub mod scene;
-pub mod camera_rays;
+pub mod camera_ray_generator;
 pub mod basic;
 pub mod staged;
+pub mod ray_triangle_intersector;
+pub mod types;
 
 use crate::renderer::scene::Scene;
 use crate::renderer::backend::BackendState;

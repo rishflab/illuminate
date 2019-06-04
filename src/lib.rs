@@ -1,5 +1,5 @@
-//#![feature(pattern_parentheses)]
-//
+extern crate nalgebra_glm as glm;
+
 //extern crate cgmath;
 //extern crate rhusics_core;
 //extern crate rhusics_ecs;

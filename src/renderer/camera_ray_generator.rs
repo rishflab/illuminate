@@ -10,7 +10,7 @@ use std::path::Path;
 use crate::renderer::ENTRY_NAME;
 use crate::renderer::device::DeviceState;
 
-pub struct CameraRays<B: Backend> {
+pub struct CameraRayGenerator<B: Backend> {
     pub shader: B::ShaderModule,
     pub set_layout: B::DescriptorSetLayout,
     pub layout: B::PipelineLayout,
@@ -19,9 +19,33 @@ pub struct CameraRays<B: Backend> {
     pub pool: B::DescriptorPool,
 }
 
-impl<B: Backend> CameraRays<B> {
+impl<B: Backend> CameraRayGenerator<B> {
 
-    pub unsafe fn new(device_state: Rc<RefCell<DeviceState<B>>>,) -> Self {
+
+    pub unsafe fn write_desc_set(&self, device_state: Rc<RefCell<DeviceState<B>>>,
+                                 camera_buffer: &B::Buffer, ray_buffer: &B::Buffer){
+
+        device_state
+            .borrow()
+            .device
+            .write_descriptor_sets(vec![
+                pso::DescriptorSetWrite {
+                    set: &self.desc_set,
+                    binding: 0,
+                    array_offset: 0,
+                    descriptors: Some(pso::Descriptor::Buffer(camera_buffer, None..None)),
+                },
+                pso::DescriptorSetWrite {
+                    set: &self.desc_set,
+                    binding: 1,
+                    array_offset: 0,
+                    descriptors: Some(pso::Descriptor::Buffer(ray_buffer, None..None)),
+                },
+            ]);
+
+    }
+
+    pub unsafe fn new(device_state: Rc<RefCell<DeviceState<B>>>) -> Self {
 
         let device = &device_state
             .borrow()
@@ -42,7 +66,7 @@ impl<B: Backend> CameraRays<B> {
             &[
                 pso::DescriptorSetLayoutBinding {
                     binding: 0,
-                    ty: pso::DescriptorType::UniformBuffer,
+                    ty: pso::DescriptorType::StorageBuffer,
                     count: 1,
                     stage_flags: pso::ShaderStageFlags::COMPUTE,
                     immutable_samplers: false,
@@ -63,13 +87,12 @@ impl<B: Backend> CameraRays<B> {
             2,
             &[
                 pso::DescriptorRangeDesc {
-                    ty: pso::DescriptorType::UniformBuffer,
+                    ty: pso::DescriptorType::StorageBuffer,
                     count: 1,
                 },
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageBuffer,
-                    count:
-                    1,
+                    count: 1,
                 },
             ],
             pso::DescriptorPoolCreateFlags::empty(),
@@ -97,7 +120,7 @@ impl<B: Backend> CameraRays<B> {
             device.create_compute_pipeline(&pipeline_desc, None).expect("Could not create camera ray pipeline")
         };
 
-        CameraRays {
+        CameraRayGenerator {
             shader,
             set_layout,
             pool,

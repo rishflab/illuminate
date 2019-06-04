@@ -5,11 +5,12 @@ use crate::renderer::COLOR_RANGE;
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::slice::Iter;
 
 pub struct FramebufferState<B: Backend> {
     command_pools: Option<Vec<gfx_hal::CommandPool<B, gfx_hal::Compute>>>,
     framebuffer_fences: Option<Vec<B::Fence>>,
-    image_views: Option<Vec<B::ImageView>>,
+    image_views: Vec<B::ImageView>,
     acquire_semaphores: Option<Vec<B::Semaphore>>,
     present_semaphores: Option<Vec<B::Semaphore>>,
     last_ref: usize,
@@ -17,13 +18,17 @@ pub struct FramebufferState<B: Backend> {
 }
 
 impl<B: Backend> FramebufferState<B> {
+
+    pub fn get_image_views(&self) -> &[B::ImageView] {
+        &self.image_views
+    }
+
     pub unsafe fn new(
         device: Rc<RefCell<DeviceState<B>>>,
         swapchain: &mut SwapchainState<B>,
     ) -> Self {
 
         let frame_images = {
-
             let pairs = swapchain.backbuffer
                 .iter()
                 .map(|image| {
@@ -41,8 +46,6 @@ impl<B: Backend> FramebufferState<B> {
                         .unwrap();
 
                     println!("{:?}", view);
-
-
                     view
                 })
                 .collect::<Vec<_>>();
@@ -79,7 +82,7 @@ impl<B: Backend> FramebufferState<B> {
 
         FramebufferState {
             framebuffer_fences: Some(fences),
-            image_views: Some(frame_images),
+            image_views: frame_images,
             command_pools: Some(command_pools),
             present_semaphores: Some(present_semaphores),
             acquire_semaphores: Some(acquire_semaphores),
@@ -97,8 +100,6 @@ impl<B: Backend> FramebufferState<B> {
 
 
         self.image_views
-            .as_ref()
-            .unwrap()
             .iter()
             .map(|view| {
                 let desc_set = desc_pool.allocate_set(desc_layout).unwrap();
@@ -182,9 +183,9 @@ impl<B: Backend> Drop for FramebufferState<B> {
                 device.destroy_semaphore(present_semaphore);
             }
 
-            for rtv in self.image_views.take().unwrap() {
-                device.destroy_image_view(rtv);
-            }
+//           self.image_views.into_iter().map(|rtv|{
+//               device.destroy_image_view(rtv);
+//           });
         }
     }
 }

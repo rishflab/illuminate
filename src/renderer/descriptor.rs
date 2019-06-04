@@ -5,11 +5,6 @@ use super::device::DeviceState;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-
-//pub struct DescriptorState<B: Backend> {
-//    pub descriptor_sets: Vec<B::DescriptorSet>,
-//}
-
 pub struct DescSetLayout<B: Backend> {
     pub layout: Option<B::DescriptorSetLayout>,
     pub device: Rc<RefCell<DeviceState<B>>>,
