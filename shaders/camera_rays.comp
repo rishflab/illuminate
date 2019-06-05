@@ -5,10 +5,6 @@ struct Ray {
     vec3 direction;
 };
 
-//layout(binding = 0) uniform Camera {
-//    mat4 view;
-//};
-
 layout(binding = 0) buffer Camera {
     mat4 view;
     mat4 model;
@@ -23,6 +19,8 @@ layout(std430,  binding = 1) buffer Rays {
 
 void main() {
 
+    vec3 cam_origin = vec3(0.0, 0.0, 0.0);
+
     vec2 raster_coord = gl_GlobalInvocationID.xy + vec2(0.5, 0.5);
 
     vec2 norm_coords = raster_coord / vec2(800, 800);
@@ -31,13 +29,21 @@ void main() {
 
     vec3 screen_ray_intersection = vec3(screen_coord, -1.0);
 
-    vec3 cam_origin = (view * vec4(0.0)).xyz;
+    cam_origin = (view * vec4(cam_origin, 1.0)).xyz;
 
     screen_ray_intersection = (view * vec4(screen_ray_intersection, 1.0)).xyz;
 
     vec3 ray_direction = normalize(screen_ray_intersection - cam_origin);
 
     rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y] =  Ray(cam_origin, ray_direction);
+
+    //float red = float(gl_GlobalInvocationID.x) / 800.0;
+    //float blue = (800.0 - float(gl_GlobalInvocationID.y) / 800.0);
+
+    //rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y] =  Ray(vec3(red, 0.0, 1.0), vec3(0.0, 1.0, 0.0));
+
+    //rays[799][0] = Ray(vec3(1.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0));
+    //barrier();
 
 }
 

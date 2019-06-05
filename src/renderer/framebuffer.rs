@@ -52,11 +52,7 @@ impl<B: Backend> FramebufferState<B> {
             pairs
         };
 
-        let iter_count = if frame_images.len() != 0 {
-            frame_images.len()
-        } else {
-            1 // GL can have zero
-        };
+        let iter_count = frame_images.len();
 
         let mut fences: Vec<B::Fence> = vec![];
         let mut command_pools: Vec<gfx_hal::CommandPool<B, gfx_hal::Compute>> = vec![];

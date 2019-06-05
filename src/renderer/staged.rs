@@ -12,7 +12,7 @@ use crate::renderer::ray_triangle_intersector::RayTriangleIntersector;
 use crate::renderer::Renderer;
 use super::types::Ray;
 
-use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory};
+use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory, buffer as b};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -85,7 +85,6 @@ impl<B: Backend> StagedPathtracer<B> {
         let vertex_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
-
             &scene.mesh_data.positions,
         );
 
@@ -100,7 +99,8 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             ray_buffer.get_buffer(),
             vertex_buffer.get_buffer(),
-            index_buffer.get_buffer()
+            index_buffer.get_buffer(),
+            camera_buffer.get_buffer()
         );
 
 
@@ -150,6 +150,8 @@ impl<B: Backend> StagedPathtracer<B> {
         self.camera_buffer
             .update_data(0, &data);
 
+        println!("frame {:?}", frame);
+
         let (fid, sid) = self
             .framebuffer
             .get_frame_data(Some(frame as usize), Some(sem_index));
@@ -185,6 +187,22 @@ impl<B: Backend> StagedPathtracer<B> {
             );
             cmd_buffer.dispatch([800, 800, 1]);
 
+//            let ray_barrier = memory::Barrier::Buffer {
+//                states: b::Access::SHADER_WRITE | b::Access::SHADER_READ
+//                    ..b::Access::SHADER_WRITE | b::Access::SHADER_READ,
+//                target: self.ray_buffer.get_buffer(),
+//                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
+//                /// Range of the buffer the barrier applies to.
+//                range: Some(0 as u64)..Some(self.ray_buffer.size as u64),
+//            };
+//
+//
+//            cmd_buffer.pipeline_barrier(
+//                pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
+//                memory::Dependencies::empty(),
+//                &[ray_barrier],
+//            );
+
             cmd_buffer.bind_compute_pipeline(&self.ray_triangle_intersector.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
                 &self.ray_triangle_intersector.layout,
@@ -198,6 +216,8 @@ impl<B: Backend> StagedPathtracer<B> {
             cmd_buffer.dispatch([800, 800, 1]);
 
             cmd_buffer.finish();
+
+
 
 
             let submission = Submission {

@@ -1,4 +1,4 @@
-use gfx_hal::{Adapter, Backend, Compute, QueueGroup, Surface};
+use gfx_hal::{Adapter, Backend, Compute, QueueGroup, Surface, queue};
 
 pub struct DeviceState<B: Backend> {
     pub device: B::Device,
@@ -22,5 +22,9 @@ impl<B: Backend> DeviceState<B> {
             queues: queue_group,
             physical_device: adapter.physical_device,
         }
+    }
+
+    pub fn get_queue_family_id(&self) -> queue::QueueFamilyId {
+        self.queues.family()
     }
 }
