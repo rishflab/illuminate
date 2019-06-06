@@ -11,6 +11,7 @@ use crate::renderer::camera_ray_generator::CameraRayGenerator;
 use crate::renderer::ray_triangle_intersector::RayTriangleIntersector;
 use crate::renderer::Renderer;
 use super::types::Ray;
+use super::DIMS;
 
 use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory, buffer as b};
 
@@ -44,6 +45,7 @@ impl<B: Backend> StagedPathtracer<B> {
             &backend.surface,
         )));
 
+
         let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
         println!("created swap chain");
 
@@ -69,10 +71,14 @@ impl<B: Backend> StagedPathtracer<B> {
         let ray_buffer = BufferState::new_empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
-            800*800,
+            (DIMS.width * DIMS.height) as u64,
+//            Ray{
+//                origin: glm::vec3(0.0, 0.0, 0.0),
+//                direction: glm::vec3(0.0, 0.0, 0.0,),
+//            }
             Ray{
-                origin: glm::vec3(0.0, 0.0, 0.0),
-                direction: glm::vec3(0.0, 0.0, 0.0,),
+                origin: [0.0, 0.0, 0.0, 0.0],
+                direction: [0.0, 0.0, 0.0, 0.0],
             }
         );
 
@@ -150,7 +156,7 @@ impl<B: Backend> StagedPathtracer<B> {
         self.camera_buffer
             .update_data(0, &data);
 
-        println!("frame {:?}", frame);
+        //println!("frame {:?}", frame);
 
         let (fid, sid) = self
             .framebuffer
@@ -175,6 +181,7 @@ impl<B: Backend> StagedPathtracer<B> {
 
             let mut cmd_buffer = command_pool.acquire_command_buffer::<command::OneShot>();
 
+
             cmd_buffer.begin();
             cmd_buffer.bind_compute_pipeline(&self.camera_ray_generator.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
@@ -185,23 +192,25 @@ impl<B: Backend> StagedPathtracer<B> {
                 ),
                 &[]
             );
-            cmd_buffer.dispatch([800, 800, 1]);
-
+            cmd_buffer.dispatch([DIMS.width, DIMS.height, 1]);
+//
 //            let ray_barrier = memory::Barrier::Buffer {
-//                states: b::Access::SHADER_WRITE | b::Access::SHADER_READ
-//                    ..b::Access::SHADER_WRITE | b::Access::SHADER_READ,
+//                states: b::Access::SHADER_WRITE..b::Access::SHADER_READ,
 //                target: self.ray_buffer.get_buffer(),
-//                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
+//                //families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
+//                families: None,
 //                /// Range of the buffer the barrier applies to.
 //                range: Some(0 as u64)..Some(self.ray_buffer.size as u64),
+//                //range: None..None,
 //            };
-//
-//
+
+
 //            cmd_buffer.pipeline_barrier(
 //                pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
 //                memory::Dependencies::empty(),
 //                &[ray_barrier],
 //            );
+
 
             cmd_buffer.bind_compute_pipeline(&self.ray_triangle_intersector.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
@@ -213,7 +222,8 @@ impl<B: Backend> StagedPathtracer<B> {
                 ),
                 &[]
             );
-            cmd_buffer.dispatch([800, 800, 1]);
+
+            cmd_buffer.dispatch([DIMS.width, DIMS.height, 1]);
 
             cmd_buffer.finish();
 

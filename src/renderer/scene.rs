@@ -14,7 +14,7 @@ impl Scene {
     pub fn new(mesh_data: MeshData) -> Scene {
 
         let view = glm::look_at(
-            &glm::vec3(0.0,1.0,7.0), // Camera is at (4,3,3), in World Space
+            &glm::vec3(0.0,2.0,6.0), // Camera is at (4,3,3), in World Space
             &glm::vec3(0.0,0.0,0.0), // and looks at the origin
             &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
         );
@@ -23,7 +23,7 @@ impl Scene {
 
         let cube_pos = glm::vec3(0.0, 0.0, 0.0);
 
-        let color = glm::vec4(0.0, 0.0, 0.0, 0.0);
+        let color = glm::vec4(0.0, 1.0, 0.0, 0.0);
 
         Scene {
             camera: view,

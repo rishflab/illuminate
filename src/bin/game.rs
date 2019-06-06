@@ -53,6 +53,6 @@ fn main() {
 
         let duration = start.elapsed();
 
-        println!("Frame time {:?}", duration);
+        //println!("Frame time {:?}", duration);
     }
 }

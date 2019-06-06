@@ -1,7 +1,7 @@
 use gfx_hal::{Backend, Device, Surface, SwapchainConfig, image as i, format, format::ChannelType};
 use super::device::DeviceState;
 use super::backend::BackendState;
-use super::window::DIMS;
+use super::DIMS;
 
 use std::cell::RefCell;
 use std::rc::Rc;

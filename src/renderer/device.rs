@@ -15,6 +15,7 @@ impl<B: Backend> DeviceState<B> {
             .open_with::<_, Compute>(1, |family| surface.supports_queue_family(family))
             .unwrap();
 
+
         println!("queue created");
 
         DeviceState {

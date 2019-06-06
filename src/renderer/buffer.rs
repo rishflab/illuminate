@@ -27,6 +27,7 @@ impl<B: Backend> BufferState<B> {
             let device = &device_ptr.borrow().device;
 
             let stride = size_of::<T>() as u64;
+            println!("size of: {:?}", stride);
             let upload_size = len as u64 * stride;
 
             let mut buffer = device.create_buffer(
@@ -49,6 +50,8 @@ impl<B: Backend> BufferState<B> {
             let mut memory = device.allocate_memory(upload_type, mem_req.size).unwrap();
 
             device.bind_buffer_memory(&memory, 0, &mut buffer).unwrap();
+
+            println!("full size: {:?}", mem_req.size);
 
             (memory, buffer, mem_req.size)
 

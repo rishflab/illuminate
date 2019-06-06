@@ -40,9 +40,6 @@ void main() {
     //float red = float(gl_GlobalInvocationID.x) / 800.0;
     //float blue = (800.0 - float(gl_GlobalInvocationID.y) / 800.0);
 
-    //rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y] =  Ray(vec3(red, 0.0, 1.0), vec3(0.0, 1.0, 0.0));
-
-    //rays[799][0] = Ray(vec3(1.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0));
     //barrier();
 
 }

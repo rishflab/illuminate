@@ -1,6 +1,6 @@
 use glm;
 
 pub struct Ray {
-    pub origin: glm::Vec3,
-    pub direction: glm::Vec3,
+    pub origin: [f32; 4],
+    pub direction: [f32; 4],
 }

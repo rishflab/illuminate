@@ -18,6 +18,12 @@ use crate::renderer::backend::BackendState;
 use crate::renderer::window::WindowState;
 
 use gfx_hal::{Backend, format, image};
+use gfx_hal::window::Extent2D;
+
+const DIMS: Extent2D = Extent2D {
+    width: 800,
+    height: 800,
+};
 
 const ENTRY_NAME: &str = "main";
 

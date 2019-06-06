@@ -1,6 +1,4 @@
-use gfx_hal::window::Extent2D;
-
-pub const DIMS: Extent2D = Extent2D { width: 800, height: 800};
+use super::DIMS;
 
 use std::string::ToString;
 use winit;
@@ -24,3 +22,4 @@ impl WindowState {
         }
     }
 }
+
