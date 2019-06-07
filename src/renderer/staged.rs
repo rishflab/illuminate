@@ -9,8 +9,10 @@ use crate::renderer::scene::Scene;
 use crate::renderer::descriptor::DescSetLayout;
 use crate::renderer::camera_ray_generator::CameraRayGenerator;
 use crate::renderer::ray_triangle_intersector::RayTriangleIntersector;
+use crate::renderer::accumulator::Accumulator;
 use crate::renderer::Renderer;
 use super::types::Ray;
+use super::types::Intersection;
 use super::DIMS;
 
 use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory, buffer as b};
@@ -28,10 +30,12 @@ pub struct StagedPathtracer<B: Backend> {
     pub framebuffer: FramebufferState<B>,
     pub camera_ray_generator: CameraRayGenerator<B>,
     pub ray_triangle_intersector: RayTriangleIntersector<B>,
+    pub accumulator: Accumulator<B>,
     pub camera_buffer: BufferState<B>,
     pub ray_buffer: BufferState<B>,
     pub vertex_buffer: BufferState<B>,
     pub index_buffer: BufferState<B>,
+    pub intersection_buffer: BufferState<B>,
 }
 
 impl<B: Backend> StagedPathtracer<B> {
@@ -44,7 +48,6 @@ impl<B: Backend> StagedPathtracer<B> {
             backend.adapter.adapter.take().unwrap(),
             &backend.surface,
         )));
-
 
         let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
         println!("created swap chain");
@@ -62,6 +65,8 @@ impl<B: Backend> StagedPathtracer<B> {
 
         let ray_triangle_intersector = RayTriangleIntersector::new(Rc::clone(&device));
 
+        let accumulator = Accumulator::new(Rc::clone(&device));
+
         let camera_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
@@ -72,13 +77,18 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             (DIMS.width * DIMS.height) as u64,
-//            Ray{
-//                origin: glm::vec3(0.0, 0.0, 0.0),
-//                direction: glm::vec3(0.0, 0.0, 0.0,),
-//            }
             Ray{
                 origin: [0.0, 0.0, 0.0, 0.0],
                 direction: [0.0, 0.0, 0.0, 0.0],
+            }
+        );
+
+        let intersection_buffer = BufferState::new_empty(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            (DIMS.width * DIMS.height * 12) as u64,
+            Intersection{
+                color: [0.0, 0.0, 0.0, 0.0],
             }
         );
 
@@ -94,11 +104,10 @@ impl<B: Backend> StagedPathtracer<B> {
             &scene.mesh_data.positions,
         );
 
-        camera_ray_generator.write_desc_set(Rc::clone(&device), camera_buffer.get_buffer(), ray_buffer.get_buffer());
-
-        ray_triangle_intersector.write_frame_desc_sets(
+        camera_ray_generator.write_desc_set(
             Rc::clone(&device),
-            framebuffer.get_image_views()
+            camera_buffer.get_buffer(),
+            ray_buffer.get_buffer(),
         );
 
         ray_triangle_intersector.write_desc_set(
@@ -106,7 +115,18 @@ impl<B: Backend> StagedPathtracer<B> {
             ray_buffer.get_buffer(),
             vertex_buffer.get_buffer(),
             index_buffer.get_buffer(),
-            camera_buffer.get_buffer()
+            camera_buffer.get_buffer(),
+            intersection_buffer.get_buffer(),
+        );
+
+        accumulator.write_desc_set(
+            Rc::clone(&device),
+            intersection_buffer.get_buffer(),
+        );
+
+        accumulator.write_frame_desc_sets(
+            Rc::clone(&device),
+            framebuffer.get_image_views(),
         );
 
 
@@ -118,10 +138,12 @@ impl<B: Backend> StagedPathtracer<B> {
             framebuffer: framebuffer,
             camera_ray_generator,
             ray_triangle_intersector,
+            accumulator,
             camera_buffer,
             ray_buffer,
             index_buffer,
             vertex_buffer,
+            intersection_buffer,
         }
     }
 
@@ -217,8 +239,22 @@ impl<B: Backend> StagedPathtracer<B> {
                 &self.ray_triangle_intersector.layout,
                 0,
                 vec!(
-                    &self.ray_triangle_intersector.frame_desc_sets[frame as usize],
                     &self.ray_triangle_intersector.desc_set
+                ),
+                &[]
+            );
+
+            cmd_buffer.dispatch([DIMS.width, DIMS.height, 12]);
+
+
+
+            cmd_buffer.bind_compute_pipeline(&self.accumulator.pipeline);
+            cmd_buffer.bind_compute_descriptor_sets(
+                &self.accumulator.layout,
+                0,
+                vec!(
+                    &self.accumulator.frame_desc_sets[frame as usize],
+                    &self.accumulator.desc_set
                 ),
                 &[]
             );

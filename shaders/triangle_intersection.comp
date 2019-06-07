@@ -7,26 +7,34 @@ struct Ray {
     vec3 direction;
 };
 
-layout(set = 0, binding = 0, rgba8) uniform writeonly image2D img;
+struct Intersection {
+    vec4 color;
+};
 
-layout(set = 1, std430, binding = 0) buffer Rays {
+//layout(set = 0, binding = 0, rgba8) uniform image2D img;
+
+layout(std430, binding = 0) buffer Rays {
     Ray rays[800][800];
 };
 
-layout(set = 1, binding = 1) buffer Indices {
+layout(binding = 1) buffer Indices {
     uint indices[];
 };
 
-layout(set = 1, binding = 2) buffer Vertices {
+layout(binding = 2) buffer Vertices {
     float vertices[];
 };
 
-layout(set = 1, binding = 3) buffer Camera {
+layout(binding = 3) buffer Camera {
     mat4 view;
     mat4 model;
     vec4 color;
-
 };
+
+layout(std430, binding = 4) buffer Intersections {
+    Intersection intersections[800][800][12];
+};
+
 
 struct Light {
     vec3 position;
@@ -100,72 +108,63 @@ void main() {
 
     Light l = Light(vec3(0.0, 6.0, 3.0), 0.5);
 
-    //vec4 to_write = vec4(rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y].origin, 0.0);
+    uint i = 3*gl_GlobalInvocationID.z;
 
-    vec4 to_write = vec4(1.0, 1.0, 0.0, 1.0);
+    uint i0 = indices[i];
+    uint i1 = indices[i+1];
+    uint i2 = indices[i+2];
 
-    for(uint i=0; i < indices.length(); i= i+3){
-
-        uint i0 = indices[i];
-        uint i1 = indices[i+1];
-        uint i2 = indices[i+2];
-
-        vec3 v0 = vec3(
+    vec3 v0 = vec3(
         vertices[3*i0 + 0],
         vertices[3*i0 + 1],
         vertices[3*i0 + 2]
-        );
-        vec3 v1 = vec3(
+    );
+    vec3 v1 = vec3(
         vertices[3*i1 + 0],
         vertices[3*i1 + 1],
         vertices[3*i1 + 2]
-        );
-        vec3 v2 = vec3(
+    );
+    vec3 v2 = vec3(
         vertices[3*i2 + 0],
         vertices[3*i2 + 1],
         vertices[3*i2 + 2]
-        );
+    );
 
-        model_world_transform(model, v0, v1, v2);
+    model_world_transform(model, v0, v1, v2);
 
-        float a = mollerTrumboreIntersectTriangle(ray.origin, ray.direction, v0, v1, v2);
+    float a = mollerTrumboreIntersectTriangle(ray.origin, ray.direction, v0, v1, v2);
 
-        if (a > EPSILON) {
+    vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
-            vec3 intersection_point = ray.origin + ray.direction * a;
+    if (a > EPSILON) {
 
-            vec3 light_direction = normalize(l.position - intersection_point);
+        vec3 intersection_point = ray.origin + ray.direction * a;
 
-            float light_distance = distance(l.position, intersection_point);
+        vec3 light_direction = normalize(l.position - intersection_point);
 
-            vec3 edge1 = v1 - v0;
-            vec3 edge2 = v2 - v0;
-            vec3 surface_normal = cross(edge2, edge1);
+        float light_distance = distance(l.position, intersection_point);
 
-            vec3 P = cross(light_direction, edge2);
+        vec3 edge1 = v1 - v0;
+        vec3 edge2 = v2 - v0;
+        vec3 surface_normal = cross(edge2, edge1);
 
-            // if determinant is near zero, ray lies in plane of triangle
-            float det = dot(edge1, P);
+        vec3 P = cross(light_direction, edge2);
 
-            float shade = 0.0;
+        // if determinant is near zero, ray lies in plane of triangle
+        float det = dot(edge1, P);
 
-            if (det < EPSILON ) {
+        float shade = 0.0;
 
-                shade = -1.0 * det * 15.0 * (1 / (light_distance * light_distance));
-            }
+        if (det < EPSILON ) {
 
+            shade = -1.0 * det * 15.0 * (1 / (light_distance * light_distance));
             to_write = vec4(shade, shade, shade, 1.0);
 
         }
 
     }
 
-    if (ray.origin == vec3(0.0) && ray.direction == vec3(0.0)){
-        imageStore(img, ivec2(gl_GlobalInvocationID.xy), vec4(1.0, 0.0, 0.0, 1.0));
-    } else {
-        imageStore(img, ivec2(gl_GlobalInvocationID.xy), to_write);
-    }
+    intersections[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y][gl_GlobalInvocationID.z] = Intersection(to_write);
 
-    //imageStore(img, ivec2(gl_GlobalInvocationID.xy), to_write);
 }
 

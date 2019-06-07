@@ -12,6 +12,7 @@ pub mod basic;
 pub mod staged;
 pub mod ray_triangle_intersector;
 pub mod types;
+pub mod accumulator;
 
 use crate::renderer::scene::Scene;
 use crate::renderer::backend::BackendState;

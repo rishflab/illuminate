@@ -37,10 +37,5 @@ void main() {
 
     rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y] =  Ray(cam_origin, ray_direction);
 
-    //float red = float(gl_GlobalInvocationID.x) / 800.0;
-    //float blue = (800.0 - float(gl_GlobalInvocationID.y) / 800.0);
-
-    //barrier();
-
 }
 
