@@ -1,10 +1,11 @@
 use gfx_hal::{Backend, Device, Surface, SwapchainConfig, image as i, format, format::ChannelType};
 use super::device::DeviceState;
 use super::backend::BackendState;
-use super::DIMS;
+use crate::window::DIMS;
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use gfx_hal::window::Extent2D;
 
 pub struct SwapchainState<B: Backend> {
     pub swapchain: Option<B::Swapchain>,
@@ -30,7 +31,13 @@ impl<B: Backend> SwapchainState<B> {
         });
 
         println!("Surface format: {:?}", format);
-        let mut swap_config = SwapchainConfig::from_caps(&caps, format, DIMS);
+
+        let dims = Extent2D{
+            width: DIMS.width,
+            height: DIMS.height,
+        };
+
+        let mut swap_config = SwapchainConfig::from_caps(&caps, format, dims);
 
         swap_config.present_mode = gfx_hal::PresentMode::Immediate;
         swap_config.image_usage = i::Usage::STORAGE | i::Usage::COLOR_ATTACHMENT ;

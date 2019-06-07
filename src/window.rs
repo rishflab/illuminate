@@ -1,7 +1,16 @@
-use super::DIMS;
-
 use std::string::ToString;
 use winit;
+
+pub struct Dims {
+    pub width: u32,
+    pub height: u32,
+}
+
+pub const DIMS: Dims = Dims {
+    width: 800,
+    height: 800,
+};
+
 
 pub struct WindowState {
     pub wb: Option<winit::WindowBuilder>,

@@ -9,7 +9,7 @@ use std::io::Read;
 use std::path::Path;
 use std::slice::Iter;
 use crate::renderer::ENTRY_NAME;
-use crate::renderer::device::DeviceState;
+use crate::renderer::core::device::DeviceState;
 
 pub struct Accumulator<B: Backend> {
     pub shader: B::ShaderModule,

@@ -1,19 +1,24 @@
-use crate::renderer::window::WindowState;
-use crate::renderer::backend::BackendState;
-use crate::renderer::device::DeviceState;
-use crate::renderer::swapchain::SwapchainState;
-use crate::renderer::pipeline::PipelineState;
-use crate::renderer::framebuffer::FramebufferState;
-use crate::renderer::buffer::BufferState;
+pub mod ray_triangle_intersector;
+pub mod camera_ray_generator;
+pub mod types;
+pub mod accumulator;
+
+use crate::window::WindowState;
+use crate::renderer::core::backend::BackendState;
+use crate::renderer::core::device::DeviceState;
+use crate::renderer::core::swapchain::SwapchainState;
+use crate::renderer::core::pipeline::PipelineState;
+use crate::renderer::core::framebuffer::FramebufferState;
+use crate::renderer::core::buffer::BufferState;
 use crate::renderer::scene::Scene;
-use crate::renderer::descriptor::DescSetLayout;
-use crate::renderer::camera_ray_generator::CameraRayGenerator;
-use crate::renderer::ray_triangle_intersector::RayTriangleIntersector;
-use crate::renderer::accumulator::Accumulator;
+use crate::renderer::core::descriptor::DescSetLayout;
+use self::camera_ray_generator::CameraRayGenerator;
+use self::ray_triangle_intersector::RayTriangleIntersector;
+use self::accumulator::Accumulator;
 use crate::renderer::Renderer;
-use super::types::Ray;
-use super::types::Intersection;
-use super::DIMS;
+use self::types::Ray;
+use self::types::Intersection;
+use crate::window::DIMS;
 
 use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory, buffer as b};
 

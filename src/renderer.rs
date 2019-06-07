@@ -1,30 +1,14 @@
-pub mod window;
-pub mod device;
-pub mod backend;
-pub mod swapchain;
-pub mod pipeline;
-pub mod buffer;
-pub mod descriptor;
-pub mod framebuffer;
 pub mod scene;
-pub mod camera_ray_generator;
-pub mod basic;
-pub mod staged;
-pub mod ray_triangle_intersector;
-pub mod types;
-pub mod accumulator;
+pub mod core;
+pub mod basic_pathtracer;
+pub mod staged_pathtracer;
 
-use crate::renderer::scene::Scene;
-use crate::renderer::backend::BackendState;
-use crate::renderer::window::WindowState;
+use self::scene::Scene;
+use self::core::backend::BackendState;
+use crate::window::WindowState;
 
 use gfx_hal::{Backend, format, image};
 use gfx_hal::window::Extent2D;
-
-const DIMS: Extent2D = Extent2D {
-    width: 800,
-    height: 800,
-};
 
 const ENTRY_NAME: &str = "main";
 

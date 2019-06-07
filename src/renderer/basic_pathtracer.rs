@@ -1,15 +1,15 @@
 extern crate nalgebra_glm as glm;
 
-use crate::renderer::window::WindowState;
-use crate::renderer::backend::BackendState;
-use crate::renderer::device::DeviceState;
-use crate::renderer::swapchain::SwapchainState;
-use crate::renderer::pipeline::PipelineState;
-use crate::renderer::framebuffer::FramebufferState;
-use crate::renderer::buffer::BufferState;
-use crate::renderer::scene::Scene;
-use crate::renderer::descriptor::DescSetLayout;
-use crate::renderer::Renderer;
+use crate::window::WindowState;
+use super::core::backend::BackendState;
+use super::core::device::DeviceState;
+use super::core::swapchain::SwapchainState;
+use super::core::pipeline::PipelineState;
+use super::core::framebuffer::FramebufferState;
+use super::core::buffer::BufferState;
+use super::scene::Scene;
+use super::core::descriptor::DescSetLayout;
+use super::Renderer;
 
 use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image};
 

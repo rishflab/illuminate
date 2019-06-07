@@ -1,9 +1,9 @@
 extern crate blackhole;
 
-use blackhole::renderer::basic::BasicPathtracer;
-use blackhole::renderer::staged::StagedPathtracer;
-use blackhole::renderer::window::WindowState;
-use blackhole::renderer::backend::{create_backend};
+use blackhole::renderer::basic_pathtracer::BasicPathtracer;
+use blackhole::renderer::staged_pathtracer::StagedPathtracer;
+use blackhole::window::WindowState;
+use blackhole::renderer::core::backend::{create_backend};
 use blackhole::input::{InputState, Command};
 use blackhole::renderer::scene::Scene;
 use blackhole::asset::{mesh_data_from_gltf, MeshData, load_gltf};
