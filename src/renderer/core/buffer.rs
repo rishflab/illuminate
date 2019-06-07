@@ -8,7 +8,6 @@ use core::mem::size_of;
 
 
 pub struct BufferState<B: Backend> {
-    //pub desc: Option<DescSet<B>>,
     pub memory: Option<B::Memory>,
     pub buffer: Option<B::Buffer>,
     pub device: Rc<RefCell<DeviceState<B>>>,
@@ -20,7 +19,7 @@ impl<B: Backend> BufferState<B> {
         self.buffer.as_ref().unwrap()
     }
 
-    pub unsafe fn new_empty<T>(device_ptr: Rc<RefCell<DeviceState<B>>>, memory_types: &[MemoryType], len: u64, t: T) -> Self{
+    pub unsafe fn empty<T>(device_ptr: Rc<RefCell<DeviceState<B>>>, memory_types: &[MemoryType], memory_properties: m::Properties, length: u64, t: T) -> Self{
 
         let (memory, buffer, size) = {
 
@@ -28,7 +27,7 @@ impl<B: Backend> BufferState<B> {
 
             let stride = size_of::<T>() as u64;
             println!("size of: {:?}", stride);
-            let upload_size = len as u64 * stride;
+            let upload_size = length as u64 * stride;
 
             let mut buffer = device.create_buffer(
                 upload_size,
@@ -42,7 +41,7 @@ impl<B: Backend> BufferState<B> {
                 .enumerate()
                 .position(|(id, mem_type)| {
                     mem_req.type_mask & (1 << id) != 0
-                        && mem_type.properties.contains(m::Properties::DEVICE_LOCAL | m::Properties::CPU_VISIBLE | m::Properties::COHERENT)
+                        && mem_type.properties.contains(memory_properties)
                 })
                 .unwrap()
                 .into();
@@ -66,25 +65,68 @@ impl<B: Backend> BufferState<B> {
     }
 
     pub unsafe fn new<T>(
-        device: Rc<RefCell<DeviceState<B>>>,
+        device_ptr: Rc<RefCell<DeviceState<B>>>,
         memory_types: &[MemoryType],
+        memory_properties: m::Properties,
         data: &[T],
     ) -> Self
         where
             T: Copy,
     {
-        let (buffer, memory, size) = BufferState::init_data(
-            Rc::clone(&device),
-            &data,
-            buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE,
-            memory_types,
-        );
+        let (buffer, memory, size) = {
+
+            let memory: B::Memory;
+            let mut buffer: B::Buffer;
+            let size: u64;
+
+            let stride = size_of::<T>() as u64;
+            let upload_size = data.len() as u64 * stride;
+
+            println!("upload size: {:?}", upload_size);
+
+            {
+                let device = &device_ptr.borrow().device;
+
+                let usage =   buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE;
+
+                buffer = device.create_buffer(upload_size, usage).unwrap();
+                let mem_req = device.get_buffer_requirements(&buffer);
+
+                let upload_type = memory_types
+                    .iter()
+                    .enumerate()
+                    .position(|(id, mem_type)| {
+                        mem_req.type_mask & (1 << id) != 0
+                            && mem_type.properties.contains(memory_properties)
+                    })
+                    .unwrap()
+                    .into();
+
+                memory = device.allocate_memory(upload_type, mem_req.size).unwrap();
+                device.bind_buffer_memory(&memory, 0, &mut buffer).unwrap();
+                size = mem_req.size;
+
+                // TODO: check transitions: read/write mapping and vertex buffer read
+                {
+                    let mut data_target = device
+                        .acquire_mapping_writer::<T>(&memory, 0..size)
+                        .unwrap();
+                    data_target[0..data.len()].copy_from_slice(data);
+                    device.release_mapping_writer(data_target).unwrap();
+                }
+
+            }
+
+            println!("memory written");
+
+            (buffer, memory, size)
+        };
 
 
         BufferState {
             memory: Some(memory),
             buffer: Some(buffer),
-            device: device,
+            device: device_ptr,
             size,
         }
     }

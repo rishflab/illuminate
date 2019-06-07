@@ -11,7 +11,7 @@ use super::scene::Scene;
 use super::core::descriptor::DescSetLayout;
 use super::Renderer;
 
-use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image};
+use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -160,18 +160,21 @@ impl<B: Backend> BasicPathtracer<B> {
         let camera_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
+            memory::Properties::CPU_VISIBLE,
             &scene.camera_data(),
         );
 
         let index_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
+            memory::Properties::CPU_VISIBLE,
             &scene.mesh_data.indices,
         );
 
         let vertex_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
+            memory::Properties::CPU_VISIBLE,
             &scene.mesh_data.positions,
         );
 

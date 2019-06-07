@@ -75,12 +75,14 @@ impl<B: Backend> StagedPathtracer<B> {
         let camera_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
+            memory::Properties::CPU_VISIBLE,
             &scene.camera_data(),
         );
 
-        let ray_buffer = BufferState::new_empty(
+        let ray_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
+            memory::Properties::DEVICE_LOCAL,
             (DIMS.width * DIMS.height) as u64,
             Ray{
                 origin: [0.0, 0.0, 0.0, 0.0],
@@ -88,9 +90,10 @@ impl<B: Backend> StagedPathtracer<B> {
             }
         );
 
-        let intersection_buffer = BufferState::new_empty(
+        let intersection_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
+            memory::Properties::DEVICE_LOCAL,
             (DIMS.width * DIMS.height * 12) as u64,
             Intersection{
                 color: [0.0, 0.0, 0.0, 0.0],
@@ -100,12 +103,14 @@ impl<B: Backend> StagedPathtracer<B> {
         let index_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
+            memory::Properties::CPU_VISIBLE,
             &scene.mesh_data.indices,
         );
 
         let vertex_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
+            memory::Properties::CPU_VISIBLE,
             &scene.mesh_data.positions,
         );
 
