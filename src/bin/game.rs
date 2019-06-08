@@ -41,6 +41,7 @@ fn main() {
                     },
                     _ => {
                         &scene.update_cube(command);
+                        println!("cube locaiton: {:?}", scene.cube_pos);
                     },
                 }
             },

@@ -11,8 +11,6 @@ struct Intersection {
     vec4 color;
 };
 
-//layout(set = 0, binding = 0, rgba8) uniform image2D img;
-
 layout(std430, binding = 0) buffer Rays {
     Ray rays[800][800];
 };
@@ -21,20 +19,13 @@ layout(binding = 1) buffer Indices {
     uint indices[];
 };
 
-layout(binding = 2) buffer Vertices {
-    float vertices[];
+layout(binding = 2) buffer VertexOut {
+    vec4 vertexOut[];
 };
 
-layout(binding = 3) buffer Camera {
-    mat4 view;
-    mat4 model;
-    vec4 color;
-};
-
-layout(std430, binding = 4) buffer Intersections {
+layout(std430, binding = 3) buffer Intersections {
     Intersection intersections[800][800][12];
 };
-
 
 struct Light {
     vec3 position;
@@ -93,44 +84,21 @@ float mollerTrumboreIntersectTriangle(vec3 orig, vec3 dir, vec3 v0, vec3 v1, vec
     return -1.0;
 }
 
-
-void model_world_transform(mat4 transform, inout vec3 v0, inout vec3 v1, inout vec3 v2){
-
-    v0 = (transform * vec4(v0, 1.0)).xyz;
-    v1 = (transform * vec4(v1, 1.0)).xyz;
-    v2 = (transform * vec4(v2, 1.0)).xyz;
-
-}
-
-void main() {
+void main(){
 
     Ray ray = rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y];
 
     Light l = Light(vec3(0.0, 6.0, 3.0), 0.5);
 
-    uint i = 3*gl_GlobalInvocationID.z;
+    uint i = 3 * gl_GlobalInvocationID.z;
 
     uint i0 = indices[i];
     uint i1 = indices[i+1];
     uint i2 = indices[i+2];
 
-    vec3 v0 = vec3(
-        vertices[3*i0 + 0],
-        vertices[3*i0 + 1],
-        vertices[3*i0 + 2]
-    );
-    vec3 v1 = vec3(
-        vertices[3*i1 + 0],
-        vertices[3*i1 + 1],
-        vertices[3*i1 + 2]
-    );
-    vec3 v2 = vec3(
-        vertices[3*i2 + 0],
-        vertices[3*i2 + 1],
-        vertices[3*i2 + 2]
-    );
-
-    model_world_transform(model, v0, v1, v2);
+    vec3 v0 = vertexOut[i0].xyz;
+    vec3 v1 = vertexOut[i1].xyz;
+    vec3 v2 = vertexOut[i2].xyz;
 
     float a = mollerTrumboreIntersectTriangle(ray.origin, ray.direction, v0, v1, v2);
 
@@ -163,6 +131,8 @@ void main() {
         }
 
     }
+
+
 
     intersections[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y][gl_GlobalInvocationID.z] = Intersection(to_write);
 

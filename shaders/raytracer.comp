@@ -180,15 +180,12 @@ void main() {
 
             if (det < EPSILON ) {
 
-                //shade = dot(light_direction, surface_normal) * 30.0 * (1 / (light_distance * light_distance));
 
                 shade = -1.0 * det * 15.0 * (1 / (light_distance * light_distance));
             }
 
             to_write = vec4(shade, shade, shade, 1.0);
-            //            if (vertices.length() == 24 ) {
-            //                to_write.x = 1.0;
-            //            }
+
         }
     }
 

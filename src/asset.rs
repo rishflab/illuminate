@@ -9,7 +9,7 @@ use gltf::buffer::Source;
 use gltf::json;
 use gltf::buffer::{View};
 use gltf::Accessor;
-use gltf::accessor::DataType;
+use gltf::accessor::{DataType, Dimensions};
 use image::load;
 
 use std::iter::FromIterator;
@@ -49,8 +49,8 @@ fn extract_data(buffer_data: &Vec<Vec<u8>>, views: &Vec<View>, accessor: &Access
     let mut bd = buffer_data.clone();
     let mut buffer = bd.remove(accessor.view().buffer().index());
 
-    match accessor.data_type() {
-        DataType::U16 => {
+    match (accessor.data_type(), accessor.dimensions()) {
+        (DataType::U16, Dimensions::Scalar) => {
             let offset = accessor.view().offset() + accessor.offset();
             let mut data: Vec<u8> = buffer[offset..(offset + accessor.size() * accessor.count())].to_vec();
             println!("{:?}", data.len());
@@ -59,6 +59,18 @@ fn extract_data(buffer_data: &Vec<Vec<u8>>, views: &Vec<View>, accessor: &Access
             println!("{:?}", bytes.len());
             //println!("{:?}", bytes);
             u32_to_bytes(bytes)
+        },
+        (DataType::F32, Dimensions::Vec3) => {
+            let offset = accessor.view().offset() + accessor.offset();
+            let mut data: Vec<u8> = buffer[offset..(offset + accessor.size() * accessor.count())].to_vec();
+            println!("{:?}", data.len());
+            //println!("{:?}", data);
+            let vecf32 = bytes_to_f32(data, 4);
+            let bytes = f32_to_vec4_bytes(vecf32);
+            println!("{:?}", bytes.len());
+            //println!("{:?}", bytes);
+           bytes
+
         },
         _ => {
             let offset = accessor.view().offset() + accessor.offset();
@@ -73,6 +85,8 @@ fn extract_data(buffer_data: &Vec<Vec<u8>>, views: &Vec<View>, accessor: &Access
             data
         },
     }
+
+
 
 }
 
@@ -90,9 +104,9 @@ fn bytes_to_f32(bytes: Vec<u8>, step: usize) -> Vec<f32> {
 
 }
 
+
 fn bytes_to_u32(bytes: Vec<u8>, step: usize) -> Vec<u32> {
     use byteorder::{LittleEndian, ByteOrder};
-
 
     let mut result: Vec<u16> = Vec::new();
 
@@ -104,7 +118,26 @@ fn bytes_to_u32(bytes: Vec<u8>, step: usize) -> Vec<u32> {
         value as u32
     }).collect()
 
+
 }
+
+fn f32_to_vec4_bytes(vec: Vec<f32>) -> Vec<u8> {
+
+    let temp: Vec<f32> = vec.chunks(3)
+        .map(|chunk|{
+            glm::vec4(chunk[0], chunk[1], chunk[2], 1.0)
+        })
+        .map(|vec4|{
+            vec4.data.to_vec()
+        })
+        .flatten()
+        .collect();
+
+    f32_to_bytes(temp)
+
+}
+
+
 
 fn u32_to_bytes(vec: Vec<u32>) -> Vec<u8> {
     use byteorder::{LittleEndian, ByteOrder};
@@ -113,6 +146,18 @@ fn u32_to_bytes(vec: Vec<u32>) -> Vec<u8> {
     vec.into_iter().for_each(|value|{
         let mut buf: [u8; 4] = [0; 4];
         LittleEndian::write_u32(&mut buf, value);
+        result.append(&mut buf.to_vec());
+    });
+    result
+}
+
+fn f32_to_bytes(vec: Vec<f32>) -> Vec<u8> {
+    use byteorder::{LittleEndian, ByteOrder};
+
+    let mut result = Vec::new();
+    vec.into_iter().for_each(|value|{
+        let mut buf: [u8; 4] = [0; 4];
+        LittleEndian::write_f32(&mut buf, value);
         result.append(&mut buf.to_vec());
     });
     result

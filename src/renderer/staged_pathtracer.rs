@@ -2,6 +2,7 @@ pub mod ray_triangle_intersector;
 pub mod camera_ray_generator;
 pub mod types;
 pub mod accumulator;
+pub mod vertex_skinner;
 
 use crate::window::WindowState;
 use crate::renderer::core::backend::BackendState;
@@ -15,6 +16,7 @@ use crate::renderer::core::descriptor::DescSetLayout;
 use self::camera_ray_generator::CameraRayGenerator;
 use self::ray_triangle_intersector::RayTriangleIntersector;
 use self::accumulator::Accumulator;
+use self::vertex_skinner::VertexSkinner;
 use crate::renderer::Renderer;
 use self::types::Ray;
 use self::types::Intersection;
@@ -26,6 +28,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::iter;
 use std::path::Path;
+use gfx_hal::pso::Stage::Vertex;
 
 pub struct StagedPathtracer<B: Backend> {
     pub swapchain: Option<SwapchainState<B>>,
@@ -35,10 +38,12 @@ pub struct StagedPathtracer<B: Backend> {
     pub framebuffer: FramebufferState<B>,
     pub camera_ray_generator: CameraRayGenerator<B>,
     pub ray_triangle_intersector: RayTriangleIntersector<B>,
+    pub vertex_skinner: VertexSkinner<B>,
     pub accumulator: Accumulator<B>,
     pub camera_buffer: BufferState<B>,
     pub ray_buffer: BufferState<B>,
-    pub vertex_buffer: BufferState<B>,
+    pub vertex_in_buffer: BufferState<B>,
+    pub vertex_out_buffer: BufferState<B>,
     pub index_buffer: BufferState<B>,
     pub intersection_buffer: BufferState<B>,
 }
@@ -72,6 +77,7 @@ impl<B: Backend> StagedPathtracer<B> {
 
         let accumulator = Accumulator::new(Rc::clone(&device));
 
+        let vertex_skinner = VertexSkinner::new(Rc::clone(&device));
 
         println!("memory types: {:?}", &backend.adapter.memory_types);
 
@@ -107,16 +113,27 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
-            scene.mesh_data.indices.len() as u64,
+            36,
             types::Index(0),
         );
 
-        let vertex_buffer = BufferState::empty(
+        println!("POSITIONS LEN: {:?}", scene.mesh_data.positions.len());
+
+        let vertex_in_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
-            scene.mesh_data.positions.len() as u64,
-            types::Vertex([0.0, 0.0, 0.0,0.0,])
+            24,
+            types::Vertex([0.0, 0.0, 0.0, 0.0])
+
+        );
+
+        let vertex_out_buffer = BufferState::empty(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            memory::Properties::DEVICE_LOCAL,
+            24,
+            types::Vertex([0.0, 0.0, 0.0, 0.0])
 
         );
 
@@ -140,12 +157,18 @@ impl<B: Backend> StagedPathtracer<B> {
             ray_buffer.get_buffer(),
         );
 
+        vertex_skinner.write_desc_set(
+            Rc::clone(&device),
+            camera_buffer.get_buffer(),
+            vertex_in_buffer.get_buffer(),
+            vertex_out_buffer.get_buffer(),
+        );
+
         ray_triangle_intersector.write_desc_set(
             Rc::clone(&device),
             ray_buffer.get_buffer(),
-            vertex_buffer.get_buffer(),
+            vertex_out_buffer.get_buffer(),
             index_buffer.get_buffer(),
-            camera_buffer.get_buffer(),
             intersection_buffer.get_buffer(),
         );
 
@@ -221,7 +244,7 @@ impl<B: Backend> StagedPathtracer<B> {
 
             cmd_buffer.copy_buffer(
                 &staging_vertex_buffer.get_buffer(),
-                &vertex_buffer.get_buffer(),
+                &vertex_in_buffer.get_buffer(),
                 &[
                     command::BufferCopy {
                         src: 0,
@@ -256,15 +279,24 @@ impl<B: Backend> StagedPathtracer<B> {
             camera_ray_generator,
             ray_triangle_intersector,
             accumulator,
+            vertex_skinner,
             camera_buffer,
             ray_buffer,
             index_buffer,
-            vertex_buffer,
+            vertex_in_buffer,
+            vertex_out_buffer,
             intersection_buffer,
         }
     }
 
     pub fn render(&mut self, scene: &Scene) {
+
+        let data = scene.camera_data();
+
+        self.camera_buffer
+            .update_data(0, &data);
+
+        println!("data: {:?}", data);
 
         let sem_index = self.framebuffer.next_acq_pre_pair_index();
 
@@ -291,11 +323,6 @@ impl<B: Backend> StagedPathtracer<B> {
                 }
         };
 
-        let data = scene.camera_data();
-        self.camera_buffer
-            .update_data(0, &data);
-
-        //println!("frame {:?}", frame);
 
         let (fid, sid) = self
             .framebuffer
@@ -320,8 +347,8 @@ impl<B: Backend> StagedPathtracer<B> {
 
             let mut cmd_buffer = command_pool.acquire_command_buffer::<command::OneShot>();
 
-
             cmd_buffer.begin();
+
             cmd_buffer.bind_compute_pipeline(&self.camera_ray_generator.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
                 &self.camera_ray_generator.layout,
@@ -332,23 +359,51 @@ impl<B: Backend> StagedPathtracer<B> {
                 &[]
             );
             cmd_buffer.dispatch([DIMS.width, DIMS.height, 1]);
-//
-//            let ray_barrier = memory::Barrier::Buffer {
-//                states: b::Access::SHADER_WRITE..b::Access::SHADER_READ,
-//                target: self.ray_buffer.get_buffer(),
-//                //families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
-//                families: None,
-//                /// Range of the buffer the barrier applies to.
-//                range: Some(0 as u64)..Some(self.ray_buffer.size as u64),
-//                //range: None..None,
-//            };
+
+            cmd_buffer.bind_compute_pipeline(&self.vertex_skinner.pipeline);
+            cmd_buffer.bind_compute_descriptor_sets(
+                &self.vertex_skinner.layout,
+                0,
+                vec!(
+                    &self.vertex_skinner.desc_set
+                ),
+                &[]
+            );
+            cmd_buffer.dispatch([24, 1, 1]);
+
+            let ray_barrier = memory::Barrier::Buffer {
+                states: b::Access::SHADER_WRITE|b::Access::SHADER_READ..b::Access::SHADER_WRITE|b::Access::SHADER_READ,
+                target: self.ray_buffer.get_buffer(),
+                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
+                /// Range of the buffer the barrier applies to.
+                range: Some(0 as u64)..Some(self.ray_buffer.size as u64),
+                //range: None..None,
+            };
+
+            let vertex_out_barrier = memory::Barrier::Buffer {
+                states: b::Access::SHADER_WRITE|b::Access::SHADER_READ..b::Access::SHADER_WRITE|b::Access::SHADER_READ,
+                target: self.vertex_out_buffer.get_buffer(),
+                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
+                /// Range of the buffer the barrier applies to.
+                range: Some(0 as u64)..Some(self.vertex_out_buffer.size as u64),
+                //range: None..None,
+            };
+
+            let vertex_in_barrier = memory::Barrier::Buffer {
+                states: b::Access::SHADER_WRITE|b::Access::SHADER_READ..b::Access::SHADER_WRITE|b::Access::SHADER_READ,
+                target: self.vertex_in_buffer.get_buffer(),
+                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
+                /// Range of the buffer the barrier applies to.
+                range: Some(0 as u64)..Some(self.vertex_in_buffer.size as u64),
+                //range: None..None,
+            };
 
 
-//            cmd_buffer.pipeline_barrier(
-//                pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
-//                memory::Dependencies::empty(),
-//                &[ray_barrier],
-//            );
+            cmd_buffer.pipeline_barrier(
+                pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
+                memory::Dependencies::empty(),
+                &[ray_barrier, vertex_in_barrier, vertex_out_barrier],
+            );
 
 
             cmd_buffer.bind_compute_pipeline(&self.ray_triangle_intersector.pipeline);

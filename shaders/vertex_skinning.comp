@@ -1,0 +1,22 @@
+#version 450
+
+layout(binding = 0) buffer Camera {
+    mat4 view;
+    mat4 model;
+    vec4 color;
+};
+
+layout(binding = 1) buffer VertexIn {
+    vec4 vertexIn[];
+};
+
+layout(binding = 2) buffer VertexOut {
+    vec4 vertexOut[];
+};
+
+void main() {
+
+    vertexOut[gl_GlobalInvocationID.x] = model * vertexIn[gl_GlobalInvocationID.x];
+
+}
+

@@ -35,7 +35,6 @@ impl Scene {
 
     pub fn camera_data(&self) -> Vec<f32> {
 
-
         let view_vec: Vec<f32> = self.camera.data.to_vec();
 
         let mut data = view_vec.clone();
@@ -57,6 +56,7 @@ impl Scene {
     }
 
     pub fn cube_model_mat(&self) -> glm::Mat4 {
+
         glm::translation(&self.cube_pos)
     }
 
