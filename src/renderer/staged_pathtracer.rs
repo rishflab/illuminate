@@ -72,6 +72,9 @@ impl<B: Backend> StagedPathtracer<B> {
 
         let accumulator = Accumulator::new(Rc::clone(&device));
 
+
+        println!("memory types: {:?}", &backend.adapter.memory_types);
+
         let camera_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
@@ -100,14 +103,31 @@ impl<B: Backend> StagedPathtracer<B> {
             }
         );
 
-        let index_buffer = BufferState::new(
+        let index_buffer = BufferState::empty(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            memory::Properties::DEVICE_LOCAL,
+            scene.mesh_data.indices.len() as u64,
+            types::Index(0),
+        );
+
+        let vertex_buffer = BufferState::empty(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            memory::Properties::DEVICE_LOCAL,
+            scene.mesh_data.positions.len() as u64,
+            types::Vertex([0.0, 0.0, 0.0,0.0,])
+
+        );
+
+        let staging_index_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
             &scene.mesh_data.indices,
         );
 
-        let vertex_buffer = BufferState::new(
+        let staging_vertex_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
@@ -138,6 +158,93 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             framebuffer.get_image_views(),
         );
+
+        // Upload data
+        unsafe {
+
+            let sem_index = framebuffer.next_acq_pre_pair_index();
+
+            let frame: gfx_hal::SwapImageIndex = unsafe {
+                let (acquire_semaphore, _) = framebuffer
+                    .get_frame_data(None, Some(sem_index))
+                    .1
+                    .unwrap();
+
+                match swapchain
+                    .swapchain
+                    .as_mut()
+                    .unwrap()
+                    .acquire_image(!0, Some(acquire_semaphore), None)
+                    {
+                        Ok((i, _)) => i,
+                        Err(_) => {
+                            panic!("couldnt acquire swapchain image")
+                        }
+                    }
+            };
+
+
+            let (fid, sid) = framebuffer
+                .get_frame_data(Some(frame as usize), Some(sem_index));
+
+            let (framebuffer_fence, command_pool) = fid.unwrap();
+            let (image_acquired, image_present) = sid.unwrap();
+
+            device
+                .borrow()
+                .device
+                .wait_for_fence(framebuffer_fence, !0)
+                .unwrap();
+            device
+                .borrow()
+                .device
+                .reset_fence(framebuffer_fence)
+                .unwrap();
+
+            command_pool.reset();
+
+            let mut cmd_buffer = command_pool.acquire_command_buffer::<command::OneShot>();
+
+            cmd_buffer.begin();
+
+            cmd_buffer.copy_buffer(
+                &staging_index_buffer.get_buffer(),
+                &index_buffer.get_buffer(),
+                &[
+                    command::BufferCopy {
+                        src: 0,
+                        dst: 0,
+                        size: staging_index_buffer.size,
+                    },
+                ],
+            );
+
+            cmd_buffer.copy_buffer(
+                &staging_vertex_buffer.get_buffer(),
+                &vertex_buffer.get_buffer(),
+                &[
+                    command::BufferCopy {
+                        src: 0,
+                        dst: 0,
+                        size: staging_vertex_buffer.size,
+                    },
+                ],
+            );
+
+            cmd_buffer.finish();
+
+
+            let submission = Submission {
+                command_buffers: iter::once(&cmd_buffer),
+                wait_semaphores: iter::once((&*image_acquired, pso::PipelineStage::BOTTOM_OF_PIPE)),
+                signal_semaphores: iter::once(&*image_present),
+            };
+
+            device.borrow_mut().queues.queues[0]
+                .submit(submission, Some(framebuffer_fence));
+
+
+        }
 
 
         StagedPathtracer {
@@ -255,8 +362,6 @@ impl<B: Backend> StagedPathtracer<B> {
             );
 
             cmd_buffer.dispatch([DIMS.width, DIMS.height, 12]);
-
-
 
             cmd_buffer.bind_compute_pipeline(&self.accumulator.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
