@@ -19,7 +19,13 @@ impl<B: Backend> BufferState<B> {
         self.buffer.as_ref().unwrap()
     }
 
-    pub unsafe fn empty<T>(device_ptr: Rc<RefCell<DeviceState<B>>>, memory_types: &[MemoryType], memory_properties: m::Properties, length: u64, t: T) -> Self{
+    pub unsafe fn empty<T>(
+        device_ptr: Rc<RefCell<DeviceState<B>>>,
+        memory_types: &[MemoryType],
+        memory_properties: m::Properties,
+        usage: buffer::Usage,
+        length: u64,
+        t: T) -> Self{
 
         let (memory, buffer, size) = {
 
@@ -29,10 +35,7 @@ impl<B: Backend> BufferState<B> {
             println!("size of: {:?}", stride);
             let upload_size = length as u64 * stride;
 
-            let mut buffer = device.create_buffer(
-                upload_size,
-                buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE)
-                .unwrap();
+            let mut buffer = device.create_buffer(upload_size, usage).unwrap();
 
             let mem_req = device.get_buffer_requirements(&buffer);
 
@@ -70,6 +73,7 @@ impl<B: Backend> BufferState<B> {
         device_ptr: Rc<RefCell<DeviceState<B>>>,
         memory_types: &[MemoryType],
         memory_properties: m::Properties,
+        usage: buffer::Usage,
         data: &[T],
     ) -> Self
         where
@@ -88,8 +92,6 @@ impl<B: Backend> BufferState<B> {
 
             {
                 let device = &device_ptr.borrow().device;
-
-                let usage =   buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE;
 
                 buffer = device.create_buffer(upload_size, usage).unwrap();
                 let mem_req = device.get_buffer_requirements(&buffer);

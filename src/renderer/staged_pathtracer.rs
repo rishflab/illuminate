@@ -22,7 +22,7 @@ use self::types::Ray;
 use self::types::Intersection;
 use crate::window::DIMS;
 
-use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory, buffer as b};
+use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory, buffer};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -85,13 +85,15 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
-            &scene.camera_data(),
+            buffer::Usage::STORAGE,
+            &scene.camera_data()
         );
 
         let ray_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
+            buffer::Usage::STORAGE,
             (DIMS.width * DIMS.height) as u64,
             Ray{
                 origin: [0.0, 0.0, 0.0, 0.0],
@@ -103,6 +105,7 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
+             buffer::Usage::STORAGE,
             (DIMS.width * DIMS.height * 12) as u64,
             Intersection{
                 color: [0.0, 0.0, 0.0, 0.0],
@@ -113,6 +116,7 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
+             buffer::Usage::TRANSFER_DST | buffer::Usage::INDEX,
             36,
             types::Index(0),
         );
@@ -123,6 +127,7 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
+             buffer::Usage::TRANSFER_DST | buffer::Usage::VERTEX,
             24,
             types::Vertex([0.0, 0.0, 0.0, 0.0])
 
@@ -132,6 +137,7 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
+            buffer::Usage::VERTEX,
             24,
             types::Vertex([0.0, 0.0, 0.0, 0.0])
 
@@ -141,6 +147,7 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
+            buffer::Usage::TRANSFER_SRC,
             &scene.mesh_data.indices,
         );
 
@@ -148,6 +155,7 @@ impl<B: Backend> StagedPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
+            buffer::Usage::TRANSFER_SRC,
             &scene.mesh_data.positions,
         );
 

@@ -11,7 +11,7 @@ use super::scene::Scene;
 use super::core::descriptor::DescSetLayout;
 use super::Renderer;
 
-use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory};
+use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory, buffer};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -161,6 +161,7 @@ impl<B: Backend> BasicPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
+            buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE,
             &scene.camera_data(),
         );
 
@@ -168,6 +169,7 @@ impl<B: Backend> BasicPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
+            buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE,
             &scene.mesh_data.indices,
         );
 
@@ -175,6 +177,7 @@ impl<B: Backend> BasicPathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
+            buffer::Usage::TRANSFER_SRC | buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE,
             &scene.mesh_data.positions,
         );
 
