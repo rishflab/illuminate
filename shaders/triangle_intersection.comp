@@ -3,27 +3,27 @@
 #define EPSILON 0.0001
 
 struct Ray {
-    vec3 origin;
-    vec3 direction;
+    vec4 origin;
+    vec4 direction;
 };
 
-struct Intersection {
+struct Intersection{
     vec4 color;
 };
 
-layout(std430, binding = 0) buffer Rays {
+layout(std430, binding = 0) buffer restrict readonly Rays {
     Ray rays[800][800];
 };
 
-layout(binding = 1) buffer Indices {
+layout(binding = 1) buffer restrict readonly Indices {
     uint indices[];
 };
 
-layout(binding = 2) buffer VertexOut {
+layout(binding = 2) buffer restrict readonly VertexOut {
     vec4 vertexOut[];
 };
 
-layout(std430, binding = 3) buffer Intersections {
+layout(std430, binding = 3) buffer restrict writeonly Intersections {
     Intersection intersections[800][800][12];
 };
 
@@ -32,109 +32,116 @@ struct Light {
     float intensity;
 };
 
-float mollerTrumboreIntersectTriangle(vec3 orig, vec3 dir, vec3 v0, vec3 v1, vec3 v2){
-    // adapted from Moller-Trumbore intersection algorithm pseudocode on wikipedia
-    vec3 e1, e2; // Edge1, Edge2
-    vec3 P, Q, T;
-    float det, inv_det, u, v;
-    float t;
 
-    // vectors for edges sharing V1
-    e1 = v1 - v0;
-    e2 = v2 - v0;
 
-    // begin calculating determinant - also used to calculate u param
-    P = cross(dir, e2);
-    //P = normalize(P);
-    // if determinant is near zero, ray lies in plane of triangle
-    det = dot(e1, P);
-    // NOT culling
-    if (det < -EPSILON ){
-        return -1.0;
+bool intersectTriangle(Ray ray, vec3 v1, vec3 v2, vec3 v3){
+    const vec3 e1 = v2 - v1;
+    const vec3 e2 = v3 - v1;
+    const vec3 s1 = cross(ray.direction.xyz, e2);
+    const float  invd = 1.0f/(dot(e1, s1));
+    const vec3 d = ray.origin.xyz - v1;
+    const float  b1 = dot(d, s1) * invd;
+    const vec3 s2 = cross(d, e1);
+    const float  b2 = dot(ray.direction.xyz, s2) * invd;
+    const float temp = dot(e2, s2) * invd;
+
+    if ( b1 < 0.f || b1 > 1.f || b2 < 0.f || b1 + b2 > 1.f || temp < 0.0 ){
+        return false;
+    } else {
+        return true;
     }
-    inv_det = 1.0 / det;
-
-    // calculate distance from v0 to ray origin
-    T = orig - v0;
-
-    // calculate u parameter and test bound
-    u = dot(T, P) * inv_det;
-    // the intersection lies outside of the triangle
-    if (u < 0.0 || u > 1.0){
-        return -1.0;
-    }
-
-    // prepare to test v parameter
-    Q = cross(T, e1);
-
-    // calculate v param and test bound
-    v = dot(dir, Q) * inv_det;
-
-    // the intersection is outside the triangle?
-    if (v < 0.0 || (u + v) > 1.0){
-        return -1.0;
-    }
-
-    t = dot(e2, Q) * inv_det;
-
-    if (t > 0.0) {
-        return t;
-    }
-
-    return -1.0;
 }
 
 void main(){
 
-    Ray ray = rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y];
-
     Light l = Light(vec3(0.0, 6.0, 3.0), 0.5);
 
-    uint i = 3 * gl_GlobalInvocationID.z;
+    Ray ray = rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y];
 
-    uint i0 = indices[i];
-    uint i1 = indices[i+1];
-    uint i2 = indices[i+2];
+    //uint i = 3 * gl_GlobalInvocationID.z;
 
-    vec3 v0 = vertexOut[i0].xyz;
-    vec3 v1 = vertexOut[i1].xyz;
-    vec3 v2 = vertexOut[i2].xyz;
+    for (uint j = 0; j < 12; j++){
 
-    float a = mollerTrumboreIntersectTriangle(ray.origin, ray.direction, v0, v1, v2);
+        uint i = 3*j;
+        uint i0 = indices[i];
+        uint i1 = indices[i+1];
+        uint i2 = indices[i+2];
 
-    vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
+        vec3 v0 = vertexOut[i0].xyz;
+        vec3 v1 = vertexOut[i1].xyz;
+        vec3 v2 = vertexOut[i2].xyz;
 
-    if (a > EPSILON) {
+        vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
+        bool a = intersectTriangle(ray, v0, v1, v2);
+        if (a == true){
 
-        vec3 intersection_point = ray.origin + ray.direction * a;
-
-        vec3 light_direction = normalize(l.position - intersection_point);
-
-        float light_distance = distance(l.position, intersection_point);
-
-        vec3 edge1 = v1 - v0;
-        vec3 edge2 = v2 - v0;
-        vec3 surface_normal = cross(edge2, edge1);
-
-        vec3 P = cross(light_direction, edge2);
-
-        // if determinant is near zero, ray lies in plane of triangle
-        float det = dot(edge1, P);
-
-        float shade = 0.0;
-
-        if (det < EPSILON ) {
-
-            shade = -1.0 * det * 15.0 * (1 / (light_distance * light_distance));
-            to_write = vec4(shade, shade, shade, 1.0);
+            to_write = vec4(0.0, 1.0, 0.0, 1.0);
+            intersections[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y][0] = Intersection(to_write);
+            break;
+        }
+        else {
+            intersections[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y][0] = Intersection(to_write);
 
         }
+
+        //intersections[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y][0] = Intersection(to_write);
 
     }
 
 
 
-    intersections[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y][gl_GlobalInvocationID.z] = Intersection(to_write);
-
 }
+
+//
+//float mollerTrumboreIntersectTriangle(vec3 orig, vec3 dir, vec3 v0, vec3 v1, vec3 v2){
+//    // adapted from Moller-Trumbore intersection algorithm pseudocode on wikipedia
+//    vec3 e1, e2; // Edge1, Edge2
+//    vec3 P, Q, T;
+//    float det, inv_det, u, v;
+//    float t;
+//
+//    // vectors for edges sharing V1
+//    e1 = v1 - v0;
+//    e2 = v2 - v0;
+//
+//    // begin calculating determinant - also used to calculate u param
+//    P = cross(dir, e2);
+//    //P = normalize(P);
+//    // if determinant is near zero, ray lies in plane of triangle
+//    det = dot(e1, P);
+//    // NOT culling
+//    if (det < -EPSILON ){
+//        return -1.0;
+//    }
+//    inv_det = 1.0 / det;
+//
+//    // calculate distance from v0 to ray origin
+//    T = orig - v0;
+//
+//    // calculate u parameter and test bound
+//    u = dot(T, P) * inv_det;
+//    // the intersection lies outside of the triangle
+//    if (u < 0.0 || u > 1.0){
+//        return -1.0;
+//    }
+//
+//    // prepare to test v parameter
+//    Q = cross(T, e1);
+//
+//    // calculate v param and test bound
+//    v = dot(dir, Q) * inv_det;
+//
+//    // the intersection is outside the triangle?
+//    if (v < 0.0 || (u + v) > 1.0){
+//        return -1.0;
+//    }
+//
+//    t = dot(e2, Q) * inv_det;
+//
+//    if (t > 0.0) {
+//        return t;
+//    }
+//
+//    return -1.0;
+//}
 

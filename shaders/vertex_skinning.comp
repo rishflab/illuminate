@@ -6,11 +6,11 @@ layout(binding = 0) buffer Camera {
     vec4 color;
 };
 
-layout(binding = 1) buffer VertexIn {
+layout(binding = 1) buffer restrict readonly VertexIn {
     vec4 vertexIn[];
 };
 
-layout(binding = 2) buffer VertexOut {
+layout(binding = 2) buffer restrict writeonly VertexOut {
     vec4 vertexOut[];
 };
 

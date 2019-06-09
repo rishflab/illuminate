@@ -296,7 +296,6 @@ impl<B: Backend> StagedPathtracer<B> {
         self.camera_buffer
             .update_data(0, &data);
 
-        println!("data: {:?}", data);
 
         let sem_index = self.framebuffer.next_acq_pre_pair_index();
 
@@ -371,39 +370,39 @@ impl<B: Backend> StagedPathtracer<B> {
             );
             cmd_buffer.dispatch([24, 1, 1]);
 
-            let ray_barrier = memory::Barrier::Buffer {
-                states: b::Access::SHADER_WRITE|b::Access::SHADER_READ..b::Access::SHADER_WRITE|b::Access::SHADER_READ,
-                target: self.ray_buffer.get_buffer(),
-                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
-                /// Range of the buffer the barrier applies to.
-                range: Some(0 as u64)..Some(self.ray_buffer.size as u64),
-                //range: None..None,
-            };
-
-            let vertex_out_barrier = memory::Barrier::Buffer {
-                states: b::Access::SHADER_WRITE|b::Access::SHADER_READ..b::Access::SHADER_WRITE|b::Access::SHADER_READ,
-                target: self.vertex_out_buffer.get_buffer(),
-                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
-                /// Range of the buffer the barrier applies to.
-                range: Some(0 as u64)..Some(self.vertex_out_buffer.size as u64),
-                //range: None..None,
-            };
-
-            let vertex_in_barrier = memory::Barrier::Buffer {
-                states: b::Access::SHADER_WRITE|b::Access::SHADER_READ..b::Access::SHADER_WRITE|b::Access::SHADER_READ,
-                target: self.vertex_in_buffer.get_buffer(),
-                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
-                /// Range of the buffer the barrier applies to.
-                range: Some(0 as u64)..Some(self.vertex_in_buffer.size as u64),
-                //range: None..None,
-            };
-
-
-            cmd_buffer.pipeline_barrier(
-                pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
-                memory::Dependencies::empty(),
-                &[ray_barrier, vertex_in_barrier, vertex_out_barrier],
-            );
+//            let ray_barrier = memory::Barrier::Buffer {
+//                states: b::Access::SHADER_WRITE|b::Access::SHADER_READ..b::Access::SHADER_WRITE|b::Access::SHADER_READ,
+//                target: self.ray_buffer.get_buffer(),
+//                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
+//                /// Range of the buffer the barrier applies to.
+//                range: Some(0 as u64)..Some(self.ray_buffer.size as u64),
+//                //range: None..None,
+//            };
+//
+//            let vertex_out_barrier = memory::Barrier::Buffer {
+//                states: b::Access::SHADER_WRITE|b::Access::SHADER_READ..b::Access::SHADER_WRITE|b::Access::SHADER_READ,
+//                target: self.vertex_out_buffer.get_buffer(),
+//                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
+//                /// Range of the buffer the barrier applies to.
+//                range: Some(0 as u64)..Some(self.vertex_out_buffer.size as u64),
+//                //range: None..None,
+//            };
+//
+//            let vertex_in_barrier = memory::Barrier::Buffer {
+//                states: b::Access::SHADER_WRITE|b::Access::SHADER_READ..b::Access::SHADER_WRITE|b::Access::SHADER_READ,
+//                target: self.vertex_in_buffer.get_buffer(),
+//                families: Some(self.device.borrow().get_queue_family_id()..self.device.borrow().get_queue_family_id()),
+//                /// Range of the buffer the barrier applies to.
+//                range: Some(0 as u64)..Some(self.vertex_in_buffer.size as u64),
+//                //range: None..None,
+//            };
+//
+//
+//            cmd_buffer.pipeline_barrier(
+//                pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
+//                memory::Dependencies::empty(),
+//                &[ray_barrier, vertex_in_barrier, vertex_out_barrier],
+//            );
 
 
             cmd_buffer.bind_compute_pipeline(&self.ray_triangle_intersector.pipeline);
@@ -416,7 +415,7 @@ impl<B: Backend> StagedPathtracer<B> {
                 &[]
             );
 
-            cmd_buffer.dispatch([DIMS.width, DIMS.height, 12]);
+            cmd_buffer.dispatch([DIMS.width, DIMS.height, 1]);
 
             cmd_buffer.bind_compute_pipeline(&self.accumulator.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(

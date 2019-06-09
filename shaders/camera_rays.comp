@@ -5,14 +5,14 @@ struct Ray {
     vec3 direction;
 };
 
-layout(binding = 0) buffer Camera {
+layout(binding = 0) buffer restrict readonly Camera {
     mat4 view;
     mat4 model;
     vec4 color;
 
 };
 
-layout(std430,  binding = 1) buffer Rays {
+layout(std430,  binding = 1) buffer restrict writeonly Rays {
     Ray rays[800][800];
 };
 
@@ -38,4 +38,47 @@ void main() {
     rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y] =  Ray(cam_origin, ray_direction);
 
 }
+//
+//
+//    #version 450
+//
+//struct Ray {
+//    vec4 origin;
+//    vec4 direction;
+//};
+//
+//layout(binding = 0) buffer Camera {
+//    mat4 view;
+//    mat4 model;
+//    vec4 color;
+//
+//};
+//
+//layout(std430,  binding = 1) buffer Rays {
+//    Ray rays[800][800];
+//};
+//
+//void main() {
+//
+//    vec4 cam_origin = vec4(0.0);
+//
+//    vec2 raster_coord = gl_GlobalInvocationID.xy + vec2(0.5, 0.5);
+//
+//    vec2 norm_coords = raster_coord / vec2(800, 800);
+//
+//    vec2 screen_coord = vec2(-1.0, 1.0) + (vec2(2.0, -2.0) * norm_coords);
+//
+//    vec4 screen_ray_intersection = vec4(screen_coord.x, screen_coord.y, -1.0, 0.0);
+//
+//    cam_origin = (view * cam_origin);
+//
+//    screen_ray_intersection = (view * screen_ray_intersection);
+//
+//    vec4 ray_direction = normalize(screen_ray_intersection - cam_origin);
+//
+//    rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y] =  Ray(cam_origin, ray_direction);
+//
+//}
+//
+//
 
