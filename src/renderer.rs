@@ -12,6 +12,8 @@ use gfx_hal::window::Extent2D;
 
 const ENTRY_NAME: &str = "main";
 
+const WORK_GROUP_SIZE: u32 = 8;
+
 const COLOR_RANGE: image::SubresourceRange = image::SubresourceRange {
     aspects: format::Aspects::COLOR,
     levels: 0..1,

@@ -21,6 +21,7 @@ use crate::renderer::Renderer;
 use self::types::Ray;
 use self::types::Intersection;
 use crate::window::DIMS;
+use crate::renderer::WORK_GROUP_SIZE;
 
 use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory, buffer};
 
@@ -365,7 +366,7 @@ impl<B: Backend> StagedPathtracer<B> {
                 ),
                 &[]
             );
-            cmd_buffer.dispatch([DIMS.width, DIMS.height, 1]);
+            cmd_buffer.dispatch([DIMS.width/WORK_GROUP_SIZE, DIMS.height/WORK_GROUP_SIZE, 1]);
 
             cmd_buffer.bind_compute_pipeline(&self.vertex_skinner.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
@@ -423,7 +424,7 @@ impl<B: Backend> StagedPathtracer<B> {
                 &[]
             );
 
-            cmd_buffer.dispatch([DIMS.width, DIMS.height, 1]);
+            cmd_buffer.dispatch([DIMS.width/WORK_GROUP_SIZE, DIMS.height/WORK_GROUP_SIZE, 1]);
 
             cmd_buffer.bind_compute_pipeline(&self.accumulator.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
@@ -436,7 +437,7 @@ impl<B: Backend> StagedPathtracer<B> {
                 &[]
             );
 
-            cmd_buffer.dispatch([DIMS.width, DIMS.height, 1]);
+            cmd_buffer.dispatch([DIMS.width/WORK_GROUP_SIZE, DIMS.height/WORK_GROUP_SIZE, 1]);
 
             cmd_buffer.finish();
 

@@ -2,6 +2,8 @@
 
 #define EPSILON 0.0001
 
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
 struct Ray {
     vec4 origin;
     vec4 direction;
@@ -32,8 +34,6 @@ struct Light {
     float intensity;
 };
 
-
-
 bool intersectTriangle(Ray ray, vec3 v1, vec3 v2, vec3 v3){
     const vec3 e1 = v2 - v1;
     const vec3 e2 = v3 - v1;
@@ -56,9 +56,12 @@ void main(){
 
     Light l = Light(vec3(0.0, 6.0, 3.0), 0.5);
 
-    Ray ray = rays[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y];
+    uvec2 global = gl_WorkGroupID.xy;
+    uvec2 local = gl_LocalInvocationID.xy;
+    uvec2 size = gl_WorkGroupSize.xy;
+    uvec2 current = (global * size) + local;
 
-    //uint i = 3 * gl_GlobalInvocationID.z;
+    Ray ray = rays[current.x][current.y];
 
     for (uint j = 0; j < 12; j++){
 
@@ -73,18 +76,18 @@ void main(){
 
         vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
         bool a = intersectTriangle(ray, v0, v1, v2);
+
         if (a == true){
 
             to_write = vec4(0.0, 1.0, 0.0, 1.0);
-            intersections[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y][0] = Intersection(to_write);
+            intersections[current.x][current.y][0] = Intersection(to_write);
             break;
         }
         else {
-            intersections[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y][0] = Intersection(to_write);
+            intersections[current.x][current.y][0] = Intersection(to_write);
 
         }
 
-        //intersections[gl_GlobalInvocationID.x][gl_GlobalInvocationID.y][0] = Intersection(to_write);
 
     }
 
