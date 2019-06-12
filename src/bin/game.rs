@@ -5,16 +5,12 @@ use blackhole::window::WindowState;
 use blackhole::renderer::core::backend::{create_backend};
 use blackhole::input::{InputState, Command};
 use blackhole::renderer::scene::Scene;
-use blackhole::asset::{mesh_data_from_gltf, MeshData, load_gltf};
+use blackhole::asset::{MeshData, load_gltf};
 
 fn main() {
     env_logger::init();
 
-    let asset_folder = "assets";
-    let gltf = load_gltf(asset_folder, "untitled.gltf").expect("failed to load gltf");
-    let mesh_data = mesh_data_from_gltf(&gltf, asset_folder);
-
-    let mut scene = Scene::new(mesh_data);
+    let mut scene = Scene::cube();
 
     let mut window = WindowState::new();
     let mut input = InputState::new();
@@ -31,7 +27,6 @@ fn main() {
 
         use std::time::Instant;
 
-
         match input.process_raw_input() {
             Some(command) => {
                 match command {
@@ -39,8 +34,8 @@ fn main() {
                         running = false;
                     },
                     _ => {
-                        &scene.update_cube(command);
-                        println!("cube locaiton: {:?}", scene.cube_pos);
+                        &scene.update_model_position(command);
+                        println!("model location: {:?}", scene.model_pos);
                     },
                 }
             },

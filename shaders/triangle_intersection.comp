@@ -31,7 +31,7 @@ layout(binding = 2) buffer restrict readonly VertexOut {
 };
 
 layout(std430, binding = 3) buffer restrict writeonly Intersections {
-    Intersection intersections[800][800][12];
+    Intersection intersections[800][800];
 };
 
 layout(std430, binding = 4) buffer restrict readonly BoundingBox {
@@ -84,10 +84,9 @@ void main(){
 
     vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
-
     if (IntersectBox(ray, aabb[0]) ==  true) {
 
-        for (uint j = 0; j < 12; j++){
+        for (uint j = 0; j < (indices.length()/3); j++){
 
             uint i = 3*j;
             uint i0 = indices[i];
@@ -98,22 +97,21 @@ void main(){
             vec3 v1 = vertexOut[i1].xyz;
             vec3 v2 = vertexOut[i2].xyz;
 
-
             bool a = intersectTriangle(ray, v0, v1, v2);
 
             if (a == true){
                 to_write = vec4(0.0, 1.0, 0.0, 1.0);
-                intersections[current.x][current.y][0] = Intersection(to_write);
+                intersections[current.x][current.y] = Intersection(to_write);
                 break;
             }
             else {
-                intersections[current.x][current.y][0] = Intersection(to_write);
+                intersections[current.x][current.y] = Intersection(to_write);
             }
 
 
         }
     } else {
-        intersections[current.x][current.y][0] = Intersection(to_write);
+        intersections[current.x][current.y] = Intersection(to_write);
     }
 
 

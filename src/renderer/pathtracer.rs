@@ -114,7 +114,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
              buffer::Usage::STORAGE,
-            (DIMS.width * DIMS.height * 12) as u64,
+            (DIMS.width * DIMS.height) as u64,
             Intersection{
                 color: [0.0, 0.0, 0.0, 0.0],
             }
@@ -125,18 +125,18 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
              buffer::Usage::TRANSFER_DST | buffer::Usage::INDEX,
-            36,
+            scene.mesh_data.no_of_indices() as u64,
             types::Index(0),
         );
 
-        println!("POSITIONS LEN: {:?}", scene.mesh_data.positions.len());
+        println!("POSITIONS LEN: {:?}", scene.mesh_data.vertices.len());
 
         let vertex_in_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
              buffer::Usage::TRANSFER_DST | buffer::Usage::VERTEX,
-            24,
+            scene.mesh_data.no_of_vertices() as u64,
             types::Vertex([0.0, 0.0, 0.0, 0.0])
 
         );
@@ -146,7 +146,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
             buffer::Usage::VERTEX,
-            24,
+            scene.mesh_data.no_of_vertices() as u64,
             types::Vertex([0.0, 0.0, 0.0, 0.0])
 
         );
@@ -173,7 +173,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
             buffer::Usage::TRANSFER_SRC,
-            &scene.mesh_data.positions,
+            &scene.mesh_data.vertices,
         );
 
         camera_ray_generator.write_desc_set(
@@ -376,7 +376,7 @@ impl<B: Backend> Pathtracer<B> {
                 ),
                 &[]
             );
-            cmd_buffer.dispatch([24, 1, 1]);
+            cmd_buffer.dispatch([scene.mesh_data.vertices.len() as u32, 1, 1]);
 
             let vertex_barrier = memory::Barrier::AllBuffers(
                 buffer::Access::SHADER_READ..buffer::Access::SHADER_WRITE,

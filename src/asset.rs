@@ -165,102 +165,102 @@ fn f32_to_bytes(vec: Vec<f32>) -> Vec<u8> {
 
 pub struct MeshData {
     pub indices: Vec<u8>,
-    pub positions: Vec<u8>,
+    pub vertices: Vec<u8>,
     pub normals: Vec<u8>,
 }
 
-pub fn mesh_data_from_gltf(gltf: &gltf::Gltf, dir: &str) -> MeshData {
+impl MeshData {
 
-    use std::path::Path;
-
-    let mut sources = Vec::new();
-
-    for b in gltf.buffers() {
-        println!("Buffer {:?} info: ", b.name());
-        println!("{:?}", b.index());
-        println!("{:?}", b.length());
-        println!("{:?}", b.source());
-        sources.push(b.source());
-
+    pub fn no_of_triangles(&self) -> usize {
+        self.no_of_indices()/3
     }
 
-    let views: Vec<View> = gltf.views().collect();
+    pub fn no_of_indices(&self) -> usize {
+        self.indices.len()/4
+    }
 
-    let buffers: Vec<Vec<u8>> = sources
-        .iter()
-        .map(|source|{
-            load_from_source(source, dir)
-        }).collect();
+    pub fn no_of_vertices(&self) -> usize {
+        self.vertices.len()/4
+    }
 
-    println!("buffer count: {:?}", buffers.len());
-    //println!("{:?}", buffers);
+    pub fn from_gltf(gltf: &gltf::Gltf, dir: &str) -> MeshData {
 
+        use std::path::Path;
 
+        let mut sources = Vec::new();
 
-    let mut accessor_data: Vec<Vec<u8>> = gltf.accessors().map(|a|{
-        println!("Accessor {:?} info:", a.index());
-        println!("offset: {:?}", a.offset());
-        println!("count: {:?}", a.count());
-        println!("dimension: {:?}", a.dimensions());
-        println!("size: {:?}", a.size());
-        println!("data type: {:?}", a.data_type());
-        let buf = extract_data(&buffers, &views, &a);
-        buf
-
-    }).collect();
-
-
-    let (indices, positions, normals) = {
-
-        let mut positions = Vec::new();
-        let mut indices : Vec<u8> = Vec::new();
-        let mut normals = Vec::new();
-
-        for a in gltf.meshes() {
-            println!("Mesh name: {:?}", a.name());
-            println!("Mesh index: {:?}", a.index());
-
-            for p in a.primitives() {
-                p.attributes().for_each(|(s, a)| {
-                    println!("accessor semantic: {:?}", s);
-                    println!("accessor index: {:?}", a.index());
-                    println!("accessor offset: {:?}", a.offset());
-                    match s {
-                        gltf::json::mesh::Semantic::Positions => {
-                            positions = accessor_data[a.index()].clone();
-                        },
-                        gltf::json::mesh::Semantic::Normals => {
-                            normals = accessor_data[a.index()].clone();
-                        },
-                        _ => (),
-                    }
-
-                });
-
-                println!("primitive index: {:?}", p.indices().unwrap().index());
-                indices = accessor_data[p.indices().unwrap().index()].clone();
-            }
+        for b in gltf.buffers() {
+            println!("Buffer {:?} info: ", b.name());
+            println!("{:?}", b.index());
+            println!("{:?}", b.length());
+            println!("{:?}", b.source());
+            sources.push(b.source());
         }
 
-        (indices, positions, normals)
+        let views: Vec<View> = gltf.views().collect();
+
+        let buffers: Vec<Vec<u8>> = sources
+            .iter()
+            .map(|source| {
+                load_from_source(source, dir)
+            }).collect();
+
+        println!("buffer count: {:?}", buffers.len());
+        //println!("{:?}", buffers);
 
 
-    };
-    println!("indices: {:?}", indices.len());
-    println!("positions {:?}", positions.len());
-    println!("normals {:?}", normals.len());
+        let mut accessor_data: Vec<Vec<u8>> = gltf.accessors().map(|a| {
+            println!("Accessor {:?} info:", a.index());
+            println!("offset: {:?}", a.offset());
+            println!("count: {:?}", a.count());
+            println!("dimension: {:?}", a.dimensions());
+            println!("size: {:?}", a.size());
+            println!("data type: {:?}", a.data_type());
+            let buf = extract_data(&buffers, &views, &a);
+            buf
+        }).collect();
 
-    MeshData {
-        indices,
-        positions,
-        normals,
+
+        let (indices, positions, normals) = {
+            let mut positions = Vec::new();
+            let mut indices: Vec<u8> = Vec::new();
+            let mut normals = Vec::new();
+
+            for a in gltf.meshes() {
+                println!("Mesh name: {:?}", a.name());
+                println!("Mesh index: {:?}", a.index());
+
+                for p in a.primitives() {
+                    p.attributes().for_each(|(s, a)| {
+                        println!("accessor semantic: {:?}", s);
+                        println!("accessor index: {:?}", a.index());
+                        println!("accessor offset: {:?}", a.offset());
+                        match s {
+                            gltf::json::mesh::Semantic::Positions => {
+                                positions = accessor_data[a.index()].clone();
+                            },
+                            gltf::json::mesh::Semantic::Normals => {
+                                normals = accessor_data[a.index()].clone();
+                            },
+                            _ => (),
+                        }
+                    });
+
+                    println!("primitive index: {:?}", p.indices().unwrap().index());
+                    indices = accessor_data[p.indices().unwrap().index()].clone();
+                }
+            }
+
+            (indices, positions, normals)
+        };
+        println!("indices: {:?}", indices.len());
+        println!("positions {:?}", positions.len());
+        println!("normals {:?}", normals.len());
+
+        MeshData {
+            indices,
+            vertices: positions,
+            normals,
+        }
     }
-
 }
-
-//fn main() {
-//
-//    let gltf = run("assets/Box.gltf").expect("runtime error");
-//    mesh_data_from_gltf(&gltf);
-//
-//}
