@@ -1,7 +1,6 @@
 pub mod scene;
 pub mod core;
-pub mod basic_pathtracer;
-pub mod staged_pathtracer;
+pub mod pathtracer;
 
 use self::scene::Scene;
 use self::core::backend::BackendState;

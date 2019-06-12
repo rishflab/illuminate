@@ -1,0 +1,39 @@
+#version 450
+
+//layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+struct Aabb{
+    vec4 min;
+    vec4 max;
+};
+
+layout(binding = 0) buffer restrict readonly VertexOut {
+    vec4 vertices[];
+};
+
+layout(std430, binding = 1) buffer restrict writeonly BoundingBox {
+    Aabb aabb[];
+};
+
+void main() {
+
+    vec4 min = vertices[0];
+    vec4 max = vertices[0];
+
+    for (uint i = 1; i < vertices.length(); i++){
+
+        if ( vertices[i].x < min.x ) min.x = vertices[i].x;
+        if ( vertices[i].y < min.y ) min.y = vertices[i].y;
+        if ( vertices[i].z < min.z ) min.z = vertices[i].z;
+
+        if ( vertices[i].x > max.x ) max.x = vertices[i].x;
+        if ( vertices[i].y > max.y ) max.y = vertices[i].y;
+        if ( vertices[i].z > max.z ) max.z = vertices[i].z;
+
+    }
+
+    aabb[0].min = min;
+    aabb[0].max = max;
+
+}
+

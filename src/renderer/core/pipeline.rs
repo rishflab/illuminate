@@ -10,7 +10,7 @@ use std::path::Path;
 pub struct PipelineState<B: Backend> {
     pub pipeline: Option<B::ComputePipeline>,
     pub pipeline_layout: Option<B::PipelineLayout>,
-    pub device: Rc<RefCell<DeviceState<B>>>,
+    device: Rc<RefCell<DeviceState<B>>>,
 }
 
 impl<B: Backend> PipelineState<B> {

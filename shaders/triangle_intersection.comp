@@ -4,13 +4,18 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-struct Ray {
+struct Ray{
     vec4 origin;
     vec4 direction;
 };
 
 struct Intersection{
     vec4 color;
+};
+
+struct Aabb{
+    vec4 min;
+    vec4 max;
 };
 
 layout(std430, binding = 0) buffer restrict readonly Rays {
@@ -27,6 +32,10 @@ layout(binding = 2) buffer restrict readonly VertexOut {
 
 layout(std430, binding = 3) buffer restrict writeonly Intersections {
     Intersection intersections[800][800][12];
+};
+
+layout(std430, binding = 4) buffer restrict readonly BoundingBox {
+    Aabb aabb[];
 };
 
 struct Light {
@@ -52,99 +61,60 @@ bool intersectTriangle(Ray ray, vec3 v1, vec3 v2, vec3 v3){
     }
 }
 
+bool IntersectBox(Ray ray, Aabb box){
+
+    vec4 tMin = (box.min - ray.origin) / ray.direction;
+    vec4 tMax = (box.max - ray.origin) / ray.direction;
+    vec4 t1 = min(tMin, tMax);
+    vec4 t2 = max(tMin, tMax);
+    float tNear = max(max(t1.x, t1.y), t1.z);
+    float tFar = min(min(t2.x, t2.y), t2.z);
+    return (tFar >= tNear) ? true : false;
+}
+
 void main(){
 
     Light l = Light(vec3(0.0, 6.0, 3.0), 0.5);
 
-    uvec2 global = gl_WorkGroupID.xy;
-    uvec2 local = gl_LocalInvocationID.xy;
-    uvec2 size = gl_WorkGroupSize.xy;
-    uvec2 current = (global * size) + local;
+    uvec2 current = gl_GlobalInvocationID.xy;
 
     Ray ray = rays[current.x][current.y];
 
-    for (uint j = 0; j < 12; j++){
+    //BoundingBox bbox = BoundingBox(vec4(-1.1, -1.1, -1.1, 0.0), vec4(1.1, 1.1, 1.1, 0.0));
 
-        uint i = 3*j;
-        uint i0 = indices[i];
-        uint i1 = indices[i+1];
-        uint i2 = indices[i+2];
+    vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
-        vec3 v0 = vertexOut[i0].xyz;
-        vec3 v1 = vertexOut[i1].xyz;
-        vec3 v2 = vertexOut[i2].xyz;
 
-        vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
-        bool a = intersectTriangle(ray, v0, v1, v2);
+    if (IntersectBox(ray, aabb[0]) ==  true) {
 
-        if (a == true){
+        for (uint j = 0; j < 12; j++){
 
-            to_write = vec4(0.0, 1.0, 0.0, 1.0);
-            intersections[current.x][current.y][0] = Intersection(to_write);
-            break;
+            uint i = 3*j;
+            uint i0 = indices[i];
+            uint i1 = indices[i+1];
+            uint i2 = indices[i+2];
+
+            vec3 v0 = vertexOut[i0].xyz;
+            vec3 v1 = vertexOut[i1].xyz;
+            vec3 v2 = vertexOut[i2].xyz;
+
+
+            bool a = intersectTriangle(ray, v0, v1, v2);
+
+            if (a == true){
+                to_write = vec4(0.0, 1.0, 0.0, 1.0);
+                intersections[current.x][current.y][0] = Intersection(to_write);
+                break;
+            }
+            else {
+                intersections[current.x][current.y][0] = Intersection(to_write);
+            }
+
+
         }
-        else {
-            intersections[current.x][current.y][0] = Intersection(to_write);
-
-        }
-
-
+    } else {
+        intersections[current.x][current.y][0] = Intersection(to_write);
     }
 
 
-
 }
-
-//
-//float mollerTrumboreIntersectTriangle(vec3 orig, vec3 dir, vec3 v0, vec3 v1, vec3 v2){
-//    // adapted from Moller-Trumbore intersection algorithm pseudocode on wikipedia
-//    vec3 e1, e2; // Edge1, Edge2
-//    vec3 P, Q, T;
-//    float det, inv_det, u, v;
-//    float t;
-//
-//    // vectors for edges sharing V1
-//    e1 = v1 - v0;
-//    e2 = v2 - v0;
-//
-//    // begin calculating determinant - also used to calculate u param
-//    P = cross(dir, e2);
-//    //P = normalize(P);
-//    // if determinant is near zero, ray lies in plane of triangle
-//    det = dot(e1, P);
-//    // NOT culling
-//    if (det < -EPSILON ){
-//        return -1.0;
-//    }
-//    inv_det = 1.0 / det;
-//
-//    // calculate distance from v0 to ray origin
-//    T = orig - v0;
-//
-//    // calculate u parameter and test bound
-//    u = dot(T, P) * inv_det;
-//    // the intersection lies outside of the triangle
-//    if (u < 0.0 || u > 1.0){
-//        return -1.0;
-//    }
-//
-//    // prepare to test v parameter
-//    Q = cross(T, e1);
-//
-//    // calculate v param and test bound
-//    v = dot(dir, Q) * inv_det;
-//
-//    // the intersection is outside the triangle?
-//    if (v < 0.0 || (u + v) > 1.0){
-//        return -1.0;
-//    }
-//
-//    t = dot(e2, Q) * inv_det;
-//
-//    if (t > 0.0) {
-//        return t;
-//    }
-//
-//    return -1.0;
-//}
-

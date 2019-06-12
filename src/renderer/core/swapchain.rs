@@ -1,15 +1,17 @@
-use gfx_hal::{Backend, Device, Surface, SwapchainConfig, image as i, format, format::ChannelType};
+use gfx_hal::{Backend, Device, Surface, SwapchainConfig, image as i, format, format::ChannelType, pso, pso::DescriptorPool};
 use super::device::DeviceState;
 use super::backend::BackendState;
 use crate::window::DIMS;
+use crate::renderer::COLOR_RANGE;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 use gfx_hal::window::Extent2D;
 
 pub struct SwapchainState<B: Backend> {
-    pub swapchain: Option<B::Swapchain>,
+    pub swapchain: B::Swapchain,
     pub backbuffer: Vec<B::Image>,
+    pub image_views: Vec<B::ImageView>,
     pub device: Rc<RefCell<DeviceState<B>>>,
     pub extent: i::Extent,
     pub format: format::Format,
@@ -51,10 +53,34 @@ impl<B: Backend> SwapchainState<B> {
             .create_swapchain(&mut backend.surface, swap_config, None)
             .expect("Can't create swapchain");
 
+        let image_views: Vec<B::ImageView>  = {
+            backbuffer
+                .iter()
+                .map(|image| {
+                    println!("creating image view");
+                    let view = device
+                        .borrow()
+                        .device
+                        .create_image_view(
+                            &image,
+                            i::ViewKind::D2,
+                            format,
+                            format::Swizzle::NO,
+                            COLOR_RANGE.clone(),
+                        )
+                        .unwrap();
+
+                    println!("{:?}", view);
+                    view
+                })
+                .collect()
+        };
+
 
         let swapchain = SwapchainState {
-            swapchain: Some(swapchain),
-            backbuffer: backbuffer,
+            swapchain,
+            backbuffer,
+            image_views,
             device,
             extent,
             format,
@@ -62,19 +88,63 @@ impl<B: Backend> SwapchainState<B> {
         swapchain
     }
 
+    pub unsafe fn write_descriptor_sets(
+        &mut self,
+        device: Rc<RefCell<DeviceState<B>>>,
+        desc_layout: &B::DescriptorSetLayout,
+        desc_pool: &mut B::DescriptorPool,
+    ) -> Vec<B::DescriptorSet> {
+
+        self.image_views
+            .iter()
+            .map(|view| {
+                let desc_set = desc_pool.allocate_set(desc_layout).unwrap();
+
+                device
+                    .borrow()
+                    .device
+                    .write_descriptor_sets(Some(
+                        pso::DescriptorSetWrite {
+                            set: &desc_set,
+                            binding: 0,
+                            array_offset: 0,
+                            descriptors: Some(pso::Descriptor::Image(view, i::Layout::Present)),
+                        }
+                    ));
+
+
+                desc_set
+            })
+            .collect::<Vec<_>>()
+
+    }
+
     pub unsafe fn number_of_images(&self) -> usize {
         let len = self.backbuffer.len();
         len
     }
-}
 
-impl<B: Backend> Drop for SwapchainState<B> {
-    fn drop(&mut self) {
-        unsafe {
-            self.device
-                .borrow()
-                .device
-                .destroy_swapchain(self.swapchain.take().unwrap());
-        }
+    pub fn get_image_views(&self) -> &[B::ImageView] {
+        &self.image_views
     }
 }
+//
+//impl<B: Backend> Drop for SwapchainState<B> {
+//    fn drop(&mut self) {
+//        let device = &self.device.borrow().device;
+//
+//        unsafe {
+//
+//            for view in self.image_views.take().unwrap() {
+//                device.destroy_image_view(view);
+//            }
+//
+//            for image in self.backbuffer.take().unwrap() {
+//                device.destroy_image(image);
+//            }
+//
+//            self.destroy_swapchain(self.swapchain.take().unwrap());
+//
+//        }
+//    }
+//}

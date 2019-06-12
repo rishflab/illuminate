@@ -12,3 +12,8 @@ pub struct Intersection {
 pub struct Index(pub u32);
 
 pub struct Vertex (pub [f32; 4]);
+
+pub struct Aabb {
+    pub min: [f32; 4],
+    pub max: [f32; 4],
+}

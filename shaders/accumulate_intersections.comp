@@ -15,12 +15,11 @@ layout(set = 1, std430, binding = 0) buffer restrict readonly Intersections {
 
 void main() {
 
-    uvec2 global = gl_WorkGroupID.xy;
-    uvec2 local = gl_LocalInvocationID.xy;
-    uvec2 size = gl_WorkGroupSize.xy;
-    uvec2 current = (global * size) + local;
+    uvec2 current = gl_GlobalInvocationID.xy;
 
     vec4 result = intersections[current.x][current.y][0].color;
+
+    //result = vec4(1.0, 0.0, 0.0, 1.0);
 
     imageStore(img, ivec2(current.xy), result);
 

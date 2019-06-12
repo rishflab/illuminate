@@ -24,6 +24,10 @@ impl<B: Backend> DeviceState<B> {
         }
     }
 
+    pub fn get_command_queue(&mut self) -> &mut gfx_hal::queue::CommandQueue<B, gfx_hal::queue::capability::Compute> {
+        &mut self.queues.queues[0]
+    }
+
     pub fn get_queue_family_id(&self) -> queue::QueueFamilyId {
         self.queues.family()
     }
