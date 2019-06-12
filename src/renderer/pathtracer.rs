@@ -230,7 +230,6 @@ impl<B: Backend> Pathtracer<B> {
 
             let mut cmd_buffer = staging_pool.acquire_command_buffer::<command::OneShot>();
 
-
             cmd_buffer.begin();
 
             cmd_buffer.copy_buffer(
@@ -255,16 +254,6 @@ impl<B: Backend> Pathtracer<B> {
                         size: staging_vertex_buffer.size,
                     },
                 ],
-            );
-
-            cmd_buffer.pipeline_barrier(
-                pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
-                memory::Dependencies::empty(),
-                &[
-                    memory::Barrier::AllBuffers(
-                        buffer::Access::SHADER_READ..buffer::Access::SHADER_WRITE,
-                    ),
-                ]
             );
 
             cmd_buffer.finish();
@@ -378,13 +367,24 @@ impl<B: Backend> Pathtracer<B> {
             );
             cmd_buffer.dispatch([scene.mesh_data.vertices.len() as u32, 1, 1]);
 
-            let vertex_barrier = memory::Barrier::AllBuffers(
-                buffer::Access::SHADER_READ..buffer::Access::SHADER_WRITE,
-            );
+            let ray_barrier = memory::Barrier::Buffer{
+                states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
+                target: self.ray_buffer.get_buffer(),
+                families: None,
+                range: None..None
+            };
+
+            let vertex_barrier = memory::Barrier::Buffer{
+                states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
+                target: self.vertex_out_buffer.get_buffer(),
+                families: None,
+                range: None..None
+            };
+
             cmd_buffer.pipeline_barrier(
                 pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
                 memory::Dependencies::empty(),
-                &[vertex_barrier],
+                &[vertex_barrier, ray_barrier],
             );
 
             cmd_buffer.bind_compute_pipeline(&self.aabb_calculator.pipeline);
@@ -398,15 +398,17 @@ impl<B: Backend> Pathtracer<B> {
             );
             cmd_buffer.dispatch([1, 1, 1]);
 
+            let aabb_barrier = memory::Barrier::Buffer{
+                states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
+                target: self.aabb_buffer.get_buffer(),
+                families: None,
+                range: None..None
+            };
 
             cmd_buffer.pipeline_barrier(
                 pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
                 memory::Dependencies::empty(),
-                &[
-                    memory::Barrier::AllBuffers(
-                        buffer::Access::SHADER_READ..buffer::Access::SHADER_WRITE,
-                    ),
-                ]
+                &[aabb_barrier],
             );
 
             cmd_buffer.bind_compute_pipeline(&self.ray_triangle_intersector.pipeline);
@@ -421,14 +423,17 @@ impl<B: Backend> Pathtracer<B> {
 
             cmd_buffer.dispatch([DIMS.width/WORK_GROUP_SIZE, DIMS.height/WORK_GROUP_SIZE, 1]);
 
+            let intersection_barrier = memory::Barrier::Buffer{
+                states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
+                target: self.intersection_buffer.get_buffer(),
+                families: None,
+                range: None..None
+            };
+
             cmd_buffer.pipeline_barrier(
                 pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
                 memory::Dependencies::empty(),
-                &[
-                    memory::Barrier::AllBuffers(
-                        buffer::Access::SHADER_READ..buffer::Access::SHADER_WRITE,
-                    ),
-                ]
+                &[intersection_barrier],
             );
 
             cmd_buffer.bind_compute_pipeline(&self.accumulator.pipeline);
@@ -443,16 +448,6 @@ impl<B: Backend> Pathtracer<B> {
             );
 
             cmd_buffer.dispatch([DIMS.width/WORK_GROUP_SIZE, DIMS.height/WORK_GROUP_SIZE, 1]);
-
-            cmd_buffer.pipeline_barrier(
-                pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
-                memory::Dependencies::empty(),
-                &[
-                    memory::Barrier::AllBuffers(
-                        buffer::Access::SHADER_READ..buffer::Access::SHADER_WRITE,
-                    ),
-                ]
-            );
 
             cmd_buffer.finish();
 
