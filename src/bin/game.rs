@@ -35,7 +35,7 @@ fn main() {
                     },
                     _ => {
                         &scene.update_model_position(command);
-                        println!("model location: {:?}", scene.model_pos);
+                        println!("model location: {:?}", scene.translation);
                     },
                 }
             },

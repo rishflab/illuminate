@@ -2,10 +2,13 @@ use nalgebra_glm as glm;
 
 use crate::input::Command;
 use crate::asset::{load_gltf, MeshData};
+use glm::rotation;
 
 pub struct Scene {
     pub camera: glm::Mat4,
-    pub model_pos: glm::Vec3,
+    pub translation: glm::Vec3,
+    pub scale: glm::Vec3,
+    pub rotation: glm::Vec3,
     pub color: glm::Vec4,
     pub mesh_data: MeshData,
 }
@@ -25,13 +28,17 @@ impl Scene {
 
         let view = glm::inverse(&view);
 
-        let cube_pos = glm::vec3(0.0, 0.0, 0.0);
+        let translation = glm::vec3(0.0, 0.0, 0.0);
+        let scale = glm::vec3(2.0, 1.0, 1.0);
+        let rotation = glm::vec3(0.0, 0.0, 0.0);
 
         let color = glm::vec4(0.0, 1.0, 0.0, 0.0);
 
         Scene {
             camera: view,
-            model_pos: cube_pos,
+            translation,
+            scale,
+            rotation,
             color: color,
             mesh_data,
         }
@@ -51,13 +58,17 @@ impl Scene {
 
         let view = glm::inverse(&view);
 
-        let cube_pos = glm::vec3(0.0, 0.0, 0.0);
+        let translation = glm::vec3(0.0, 0.0, 0.0);
+        let scale = glm::vec3(2.0, 2.0, 2.0);
+        let rotation = glm::vec3(0.0, 0.0, 0.0);
 
         let color = glm::vec4(0.0, 1.0, 0.0, 0.0);
 
         Scene {
             camera: view,
-            model_pos: cube_pos,
+            translation,
+            scale,
+            rotation,
             color: color,
             mesh_data,
         }
@@ -87,17 +98,25 @@ impl Scene {
 
     pub fn model_mat(&self) -> glm::Mat4 {
 
-        glm::translation(&self.model_pos)
+        let translation = glm::translation(&self.translation);
+        let rotation = glm::inverse(&glm::look_at(
+            &self.translation,
+            &(self.translation + glm::vec3(-1.0,0.0,1.0)),
+            &glm::vec3(0.0,1.0,0.0)
+        ));
+        let scale = glm::scaling(&self.scale);
+
+        translation * rotation * scale
     }
 
     pub fn update_model_position(&mut self, command: Command) {
 
         match command {
             Command::MoveLeft => {
-                self.model_pos = self.model_pos + glm::vec3(-0.1, 0.0, 0.0);
+                self.translation = self.translation + glm::vec3(-0.1, 0.0, 0.0);
             },
             Command::MoveRight => {
-                self.model_pos = self.model_pos + glm::vec3(0.1, 0.0, 0.0);
+                self.translation = self.translation + glm::vec3(0.1, 0.0, 0.0);
             },
             _ => (),
 
