@@ -11,8 +11,6 @@ layout(set = 0, binding = 0, rgba8) uniform writeonly image2D img;
 layout(set = 1,  binding = 0) buffer Camera {
     mat4 view;
     mat4 model;
-    vec4 color;
-
 };
 
 layout(set = 2, binding = 0) buffer Indices {

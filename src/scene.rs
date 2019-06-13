@@ -6,7 +6,6 @@ use glm::rotation;
 
 pub struct Scene {
     pub camera: glm::Mat4,
-    pub color: glm::Vec4,
     pub mesh: Mesh,
 }
 
@@ -66,8 +65,6 @@ impl Scene {
         let scale = glm::vec3(2.0, 1.0, 1.0);
         let rotation = glm::vec3(0.0, 0.0, 0.0);
 
-        let color = glm::vec4(0.0, 1.0, 0.0, 0.0);
-
         let mesh = Mesh {
             translation,
             scale,
@@ -77,7 +74,6 @@ impl Scene {
 
         Scene {
             camera,
-            color,
             mesh
         }
     }
@@ -100,8 +96,6 @@ impl Scene {
         let scale = glm::vec3(2.0, 2.0, 2.0);
         let rotation = glm::vec3(0.0, 0.0, 0.0);
 
-        let color = glm::vec4(0.0, 1.0, 0.0, 0.0);
-
         let mesh = Mesh {
             translation,
             scale,
@@ -111,7 +105,6 @@ impl Scene {
 
         Scene {
             camera,
-            color,
             mesh
         }
     }
@@ -127,12 +120,6 @@ impl Scene {
         let mut model_vec: Vec<f32> = model.as_slice().to_vec();
 
         data.append(&mut model_vec);
-
-        let color = self.color;
-
-        let mut color_vec: Vec<f32> = color.as_slice().to_vec();
-
-        data.append(&mut color_vec);
 
         data
 
