@@ -33,8 +33,8 @@ fn main() {
                         running = false;
                     },
                     _ => {
-                        &scene.mesh.update_model_position(command);
-                        println!("model location: {:?}", scene.mesh.translation);
+                        &scene.camera.update_position(command);
+                        println!("camera location: {:?}", scene.camera.position);
                     },
                 }
             },
@@ -47,6 +47,6 @@ fn main() {
 
         let duration = start.elapsed();
 
-        println!("Frame time {:?}", duration);
+        //println!("Frame time {:?}", duration);
     }
 }

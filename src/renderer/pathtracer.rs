@@ -52,6 +52,7 @@ pub struct Pathtracer<B: Backend> {
     pub index_buffer: BufferState<B>,
     pub intersection_buffer: BufferState<B>,
     pub aabb_buffer: BufferState<B>,
+    pub model_buffer: BufferState<B>,
 }
 
 impl<B: Backend> Pathtracer<B> {
@@ -89,12 +90,23 @@ impl<B: Backend> Pathtracer<B> {
 
         println!("memory types: {:?}", &backend.adapter.memory_types);
 
+        println!("{:?}", &scene.camera.view_matrix().data.to_vec());
+        println!("{:?}", &scene.mesh.model_matrix().data.to_vec());
+
         let camera_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
             buffer::Usage::STORAGE,
-            &scene.camera_data()
+            &scene.camera.view_matrix().data,
+        );
+
+        let model_buffer = BufferState::new(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            memory::Properties::CPU_VISIBLE,
+            buffer::Usage::STORAGE,
+            &scene.mesh.model_matrix().data,
         );
 
         let ray_buffer = BufferState::empty(
@@ -184,9 +196,15 @@ impl<B: Backend> Pathtracer<B> {
 
         vertex_skinner.write_desc_set(
             Rc::clone(&device),
-            camera_buffer.get_buffer(),
+            model_buffer.get_buffer(),
             vertex_in_buffer.get_buffer(),
             vertex_out_buffer.get_buffer(),
+        );
+
+        aabb_calculator.write_desc_set(
+            Rc::clone(&device),
+            vertex_out_buffer.get_buffer(),
+            aabb_buffer.get_buffer(),
         );
 
         ray_triangle_intersector.write_desc_set(
@@ -206,12 +224,6 @@ impl<B: Backend> Pathtracer<B> {
         accumulator.write_frame_desc_sets(
             Rc::clone(&device),
             swapchain.get_image_views(),
-        );
-
-        aabb_calculator.write_desc_set(
-            Rc::clone(&device),
-            vertex_out_buffer.get_buffer(),
-            aabb_buffer.get_buffer(),
         );
 
         // Upload data
@@ -288,16 +300,13 @@ impl<B: Backend> Pathtracer<B> {
             intersection_buffer,
             aabb_calculator,
             aabb_buffer,
+            model_buffer,
         }
     }
 
     pub fn render(&mut self, scene: &Scene) {
 
-        //let device = &self.device.borrow().device;
-
-        let data = scene.camera_data();
-
-        self.camera_buffer.update_data(0, &data);
+        self.camera_buffer.update_data(0, &scene.camera.view_matrix().data);
 
         // Use guaranteed unused acquire semaphore to get the index of the next frame we will render to
         // by using acquire_image
@@ -365,7 +374,7 @@ impl<B: Backend> Pathtracer<B> {
                 ),
                 &[]
             );
-            cmd_buffer.dispatch([scene.mesh.data.vertices.len() as u32, 1, 1]);
+            cmd_buffer.dispatch([scene.mesh.data.no_of_vertices() as u32, 1, 1]);
 
             let ray_barrier = memory::Barrier::Buffer{
                 states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,

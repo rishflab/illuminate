@@ -9,7 +9,6 @@ struct Ray {
 
 layout(binding = 0) buffer restrict readonly Camera {
     mat4 view;
-    mat4 model;
 };
 
 layout(std430,  binding = 1) buffer restrict writeonly Rays {

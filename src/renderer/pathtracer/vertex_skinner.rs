@@ -23,7 +23,7 @@ impl<B: Backend> VertexSkinner<B> {
 
 
     pub unsafe fn write_desc_set(&self, device_state: Rc<RefCell<DeviceState<B>>>,
-                                 camera_buffer: &B::Buffer, vertex_in_buffer: &B::Buffer,
+                                 model_buffer: &B::Buffer, vertex_in_buffer: &B::Buffer,
                                  vertex_out_buffer: &B::Buffer){
 
         device_state
@@ -34,7 +34,7 @@ impl<B: Backend> VertexSkinner<B> {
                     set: &self.desc_set,
                     binding: 0,
                     array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(camera_buffer, None..None)),
+                    descriptors: Some(pso::Descriptor::Buffer(model_buffer, None..None)),
                 },
                 pso::DescriptorSetWrite {
                     set: &self.desc_set,

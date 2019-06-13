@@ -2,9 +2,8 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(binding = 0) buffer Camera {
-    mat4 view;
-    mat4 model;
+layout(binding = 0) buffer Model {
+    mat4 transform;
 };
 
 layout(binding = 1) buffer restrict readonly VertexIn {
@@ -17,7 +16,7 @@ layout(binding = 2) buffer restrict writeonly VertexOut {
 
 void main() {
 
-    vertexOut[gl_GlobalInvocationID.x] = model * vertexIn[gl_GlobalInvocationID.x];
+    vertexOut[gl_GlobalInvocationID.x] = transform * vertexIn[gl_GlobalInvocationID.x];
 
 }
 
