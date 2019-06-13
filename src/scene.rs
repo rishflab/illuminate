@@ -6,96 +6,18 @@ use glm::rotation;
 
 pub struct Scene {
     pub camera: glm::Mat4,
+    pub color: glm::Vec4,
+    pub mesh: Mesh,
+}
+
+pub struct Mesh {
     pub translation: glm::Vec3,
     pub scale: glm::Vec3,
     pub rotation: glm::Vec3,
-    pub color: glm::Vec4,
-    pub mesh_data: MeshData,
+    pub data: MeshData,
 }
 
-impl Scene {
-    pub fn cube() -> Scene {
-
-        let asset_folder = "assets";
-        let gltf = load_gltf(asset_folder, "untitled.gltf").expect("failed to load gltf");
-        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
-
-        let view = glm::look_at(
-            &glm::vec3(0.0,2.0,6.0), // Camera is at (4,3,3), in World Space
-            &glm::vec3(0.0,0.0,0.0), // and looks at the origin
-            &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
-        );
-
-        let view = glm::inverse(&view);
-
-        let translation = glm::vec3(0.0, 0.0, 0.0);
-        let scale = glm::vec3(2.0, 1.0, 1.0);
-        let rotation = glm::vec3(0.0, 0.0, 0.0);
-
-        let color = glm::vec4(0.0, 1.0, 0.0, 0.0);
-
-        Scene {
-            camera: view,
-            translation,
-            scale,
-            rotation,
-            color: color,
-            mesh_data,
-        }
-    }
-
-    pub fn cat() -> Scene {
-
-        let asset_folder = "assets";
-        let gltf = load_gltf(asset_folder, "cat.gltf").expect("failed to load gltf");
-        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
-
-        let view = glm::look_at(
-            &glm::vec3(0.0,200.0,1000.0), // Camera is at (4,3,3), in World Space
-            &glm::vec3(0.0,0.0,0.0), // and looks at the origin
-            &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
-        );
-
-        let view = glm::inverse(&view);
-
-        let translation = glm::vec3(0.0, 0.0, 0.0);
-        let scale = glm::vec3(2.0, 2.0, 2.0);
-        let rotation = glm::vec3(0.0, 0.0, 0.0);
-
-        let color = glm::vec4(0.0, 1.0, 0.0, 0.0);
-
-        Scene {
-            camera: view,
-            translation,
-            scale,
-            rotation,
-            color: color,
-            mesh_data,
-        }
-    }
-
-    pub fn camera_data(&self) -> Vec<f32> {
-
-        let view_vec: Vec<f32> = self.camera.data.to_vec();
-
-        let mut data = view_vec.clone();
-
-        let model = self.model_mat();
-
-        let mut model_vec: Vec<f32> = model.as_slice().to_vec();
-
-        data.append(&mut model_vec);
-
-        let color = self.color;
-
-        let mut color_vec: Vec<f32> = color.as_slice().to_vec();
-
-        data.append(&mut color_vec);
-
-        data
-
-    }
-
+impl Mesh {
     pub fn model_mat(&self) -> glm::Mat4 {
 
         let translation = glm::translation(&self.translation);
@@ -121,5 +43,98 @@ impl Scene {
             _ => (),
 
         }
+    }
+}
+
+impl Scene {
+
+    pub fn cube() -> Scene {
+
+        let asset_folder = "assets";
+        let gltf = load_gltf(asset_folder, "untitled.gltf").expect("failed to load gltf");
+        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
+
+        let view = glm::look_at(
+            &glm::vec3(0.0,2.0,6.0), // Camera is at (4,3,3), in World Space
+            &glm::vec3(0.0,0.0,0.0), // and looks at the origin
+            &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
+        );
+
+        let camera = glm::inverse(&view);
+
+        let translation = glm::vec3(0.0, 0.0, 0.0);
+        let scale = glm::vec3(2.0, 1.0, 1.0);
+        let rotation = glm::vec3(0.0, 0.0, 0.0);
+
+        let color = glm::vec4(0.0, 1.0, 0.0, 0.0);
+
+        let mesh = Mesh {
+            translation,
+            scale,
+            rotation,
+            data: mesh_data,
+        };
+
+        Scene {
+            camera,
+            color,
+            mesh
+        }
+    }
+
+    pub fn cat() -> Scene {
+
+        let asset_folder = "assets";
+        let gltf = load_gltf(asset_folder, "cat.gltf").expect("failed to load gltf");
+        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
+
+        let view = glm::look_at(
+            &glm::vec3(0.0,200.0,1000.0), // Camera is at (4,3,3), in World Space
+            &glm::vec3(0.0,0.0,0.0), // and looks at the origin
+            &glm::vec3(0.0,1.0,0.0)  // Head is up (set to 0,-1,0 to look upside-down)
+        );
+
+        let camera = glm::inverse(&view);
+
+        let translation = glm::vec3(0.0, 0.0, 0.0);
+        let scale = glm::vec3(2.0, 2.0, 2.0);
+        let rotation = glm::vec3(0.0, 0.0, 0.0);
+
+        let color = glm::vec4(0.0, 1.0, 0.0, 0.0);
+
+        let mesh = Mesh {
+            translation,
+            scale,
+            rotation,
+            data: mesh_data,
+        };
+
+        Scene {
+            camera,
+            color,
+            mesh
+        }
+    }
+
+    pub fn camera_data(&self) -> Vec<f32> {
+
+        let view_vec: Vec<f32> = self.camera.data.to_vec();
+
+        let mut data = view_vec.clone();
+
+        let model = self.mesh.model_mat();
+
+        let mut model_vec: Vec<f32> = model.as_slice().to_vec();
+
+        data.append(&mut model_vec);
+
+        let color = self.color;
+
+        let mut color_vec: Vec<f32> = color.as_slice().to_vec();
+
+        data.append(&mut color_vec);
+
+        data
+
     }
 }

@@ -1,10 +1,9 @@
-pub mod scene;
 pub mod core;
 pub mod pathtracer;
 
-use self::scene::Scene;
 use self::core::backend::BackendState;
 use crate::window::WindowState;
+use crate::scene::Scene;
 
 use gfx_hal::{Backend, format, image};
 use gfx_hal::window::Extent2D;

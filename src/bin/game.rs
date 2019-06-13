@@ -4,8 +4,7 @@ use blackhole::renderer::pathtracer::Pathtracer;
 use blackhole::window::WindowState;
 use blackhole::renderer::core::backend::{create_backend};
 use blackhole::input::{InputState, Command};
-use blackhole::renderer::scene::Scene;
-use blackhole::asset::{MeshData, load_gltf};
+use blackhole::scene::Scene;
 
 fn main() {
     env_logger::init();
@@ -34,8 +33,8 @@ fn main() {
                         running = false;
                     },
                     _ => {
-                        &scene.update_model_position(command);
-                        println!("model location: {:?}", scene.translation);
+                        &scene.mesh.update_model_position(command);
+                        println!("model location: {:?}", scene.mesh.translation);
                     },
                 }
             },

@@ -12,7 +12,7 @@ use crate::renderer::core::swapchain::SwapchainState;
 use crate::renderer::core::pipeline::PipelineState;
 use crate::renderer::core::command::CommandState;
 use crate::renderer::core::buffer::BufferState;
-use crate::renderer::scene::Scene;
+use crate::scene::Scene;
 use crate::renderer::core::descriptor::DescSetLayout;
 use self::camera_ray_generator::CameraRayGenerator;
 use self::ray_triangle_intersector::RayTriangleIntersector;
@@ -125,18 +125,18 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
              buffer::Usage::TRANSFER_DST | buffer::Usage::INDEX,
-            scene.mesh_data.no_of_indices() as u64,
+            scene.mesh.data.no_of_indices() as u64,
             types::Index(0),
         );
 
-        println!("POSITIONS LEN: {:?}", scene.mesh_data.vertices.len());
+        println!("POSITIONS LEN: {:?}", scene.mesh.data.vertices.len());
 
         let vertex_in_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
              buffer::Usage::TRANSFER_DST | buffer::Usage::VERTEX,
-            scene.mesh_data.no_of_vertices() as u64,
+            scene.mesh.data.no_of_vertices() as u64,
             types::Vertex([0.0, 0.0, 0.0, 0.0])
 
         );
@@ -146,7 +146,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
             buffer::Usage::VERTEX,
-            scene.mesh_data.no_of_vertices() as u64,
+            scene.mesh.data.no_of_vertices() as u64,
             types::Vertex([0.0, 0.0, 0.0, 0.0])
 
         );
@@ -165,7 +165,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
             buffer::Usage::TRANSFER_SRC,
-            &scene.mesh_data.indices,
+            &scene.mesh.data.indices,
         );
 
         let staging_vertex_buffer = BufferState::new(
@@ -173,7 +173,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
             buffer::Usage::TRANSFER_SRC,
-            &scene.mesh_data.vertices,
+            &scene.mesh.data.vertices,
         );
 
         camera_ray_generator.write_desc_set(
@@ -365,7 +365,7 @@ impl<B: Backend> Pathtracer<B> {
                 ),
                 &[]
             );
-            cmd_buffer.dispatch([scene.mesh_data.vertices.len() as u32, 1, 1]);
+            cmd_buffer.dispatch([scene.mesh.data.vertices.len() as u32, 1, 1]);
 
             let ray_barrier = memory::Barrier::Buffer{
                 states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
