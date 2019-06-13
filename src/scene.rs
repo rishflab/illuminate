@@ -86,7 +86,7 @@ impl Mesh {
 
 impl Scene {
 
-    pub fn cube() -> Scene {
+    pub fn cube() -> Self {
         let asset_folder = "assets";
         let gltf = load_gltf(asset_folder, "untitled.gltf").expect("failed to load gltf");
         let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
@@ -109,7 +109,7 @@ impl Scene {
         }
     }
 
-    pub fn cat() -> Scene {
+    pub fn cat() -> Self {
         let asset_folder = "assets";
         let gltf = load_gltf(asset_folder, "cat.gltf").expect("failed to load gltf");
         let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
