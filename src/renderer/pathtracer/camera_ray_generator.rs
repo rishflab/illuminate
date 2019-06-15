@@ -105,7 +105,7 @@ impl<B: Backend> CameraRayGenerator<B> {
         let layout = device.create_pipeline_layout(Some(&set_layout), &[])
             .expect("Camera ray pipeline layout creation failed");
 
-        let mut pipeline = {
+        let pipeline = {
             let shader_entry = pso::EntryPoint {
                 entry: ENTRY_NAME,
                 module: &shader,

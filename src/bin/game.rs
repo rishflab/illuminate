@@ -9,7 +9,7 @@ use blackhole::scene::Scene;
 fn main() {
     env_logger::init();
 
-    let mut scene = Scene::cube();
+    let mut scene = Scene::two_cubes();
 
     let mut window = WindowState::new();
     let mut input = InputState::new();

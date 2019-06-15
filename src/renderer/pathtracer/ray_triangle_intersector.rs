@@ -1,4 +1,4 @@
-use gfx_hal::{Backend, Device, pso, image as i};
+use gfx_hal::{Backend, Device, pso};
 
 use gfx_hal::pso::DescriptorPool;
 
@@ -7,7 +7,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::io::Read;
 use std::path::Path;
-use std::slice::Iter;
 use crate::renderer::ENTRY_NAME;
 use crate::renderer::core::device::DeviceState;
 
@@ -24,8 +23,7 @@ impl<B: Backend> RayTriangleIntersector<B> {
 
 
     pub unsafe fn write_desc_set(&self, device_state: Rc<RefCell<DeviceState<B>>>,
-                                 ray_buffer: &B::Buffer, vertex_buffer: &B::Buffer,
-                                 index_buffer: &B::Buffer,
+                                 ray_buffer: &B::Buffer, triangle_buffer: &B::Buffer,
                                  intersection_buffer: &B::Buffer,
                                  aabb_buffer: &B::Buffer){
 
@@ -43,23 +41,17 @@ impl<B: Backend> RayTriangleIntersector<B> {
                     set: &self.desc_set,
                     binding: 1,
                     array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(index_buffer, None..None)),
+                    descriptors: Some(pso::Descriptor::Buffer(triangle_buffer, None..None)),
                 },
                 pso::DescriptorSetWrite {
                     set: &self.desc_set,
                     binding: 2,
                     array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(vertex_buffer, None..None)),
-                },
-                pso::DescriptorSetWrite {
-                    set: &self.desc_set,
-                    binding: 3,
-                    array_offset: 0,
                     descriptors: Some(pso::Descriptor::Buffer(intersection_buffer, None..None)),
                 },
                 pso::DescriptorSetWrite {
                     set: &self.desc_set,
-                    binding: 4,
+                    binding: 3,
                     array_offset: 0,
                     descriptors: Some(pso::Descriptor::Buffer(aabb_buffer, None..None)),
                 },
@@ -114,36 +106,27 @@ impl<B: Backend> RayTriangleIntersector<B> {
                     stage_flags: pso::ShaderStageFlags::COMPUTE,
                     immutable_samplers: false,
                 },
-                pso::DescriptorSetLayoutBinding {
-                    binding: 4,
-                    ty: pso::DescriptorType::StorageBuffer,
-                    count: 1,
-                    stage_flags: pso::ShaderStageFlags::COMPUTE,
-                    immutable_samplers: false,
-                },
             ],
             &[],
         ).expect("Camera ray set layout creation failed");
 
         let mut pool = device.create_descriptor_pool(
-            5,
+            4,
             &[
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageBuffer,
-                    count: 5,
+                    count: 4,
                 },
             ],
             pso::DescriptorPoolCreateFlags::empty(),
         ).expect("Camera ray descriptor pool creation failed");;
 
-
         let desc_set = pool.allocate_set(&set_layout).expect("Camera ray set allocation failed");
-
 
         let layout = device.create_pipeline_layout(vec![&set_layout], &[])
             .expect("Camera ray pipeline layout creation failed");
 
-        let mut pipeline = {
+        let pipeline = {
             let shader_entry = pso::EntryPoint {
                 entry: ENTRY_NAME,
                 module: &shader,

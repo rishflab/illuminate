@@ -1,4 +1,4 @@
-use gfx_hal::{Backend, Device, pso, image as i};
+use gfx_hal::{Backend, Device, pso};
 
 use gfx_hal::pso::DescriptorPool;
 
@@ -7,7 +7,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::io::Read;
 use std::path::Path;
-use std::slice::Iter;
 use crate::renderer::ENTRY_NAME;
 use crate::renderer::core::device::DeviceState;
 
@@ -57,7 +56,7 @@ impl<B: Backend> AabbCalculator<B> {
             let path = Path::new("shaders").join("calculate_aabbs.comp");
             let glsl = fs::read_to_string(path.as_path()).unwrap();
             let spirv: Vec<u8> = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute)
-                .expect("Could not compile shader")
+                .expect("Could not compile aabb shader")
                 .bytes()
                 .map(|b| b.unwrap())
                 .collect();
@@ -103,11 +102,12 @@ impl<B: Backend> AabbCalculator<B> {
 
         let desc_set = pool.allocate_set(&set_layout).expect("Camera ray set allocation failed");
 
+        let push_constants = vec![(pso::ShaderStageFlags::COMPUTE, 0..2)];
 
-        let layout = device.create_pipeline_layout(Some(&set_layout), &[])
+        let layout = device.create_pipeline_layout(Some(&set_layout), push_constants)
             .expect("Camera ray pipeline layout creation failed");
 
-        let mut pipeline = {
+        let pipeline = {
             let shader_entry = pso::EntryPoint {
                 entry: ENTRY_NAME,
                 module: &shader,

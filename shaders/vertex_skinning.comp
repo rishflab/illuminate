@@ -2,21 +2,33 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(binding = 0) buffer Model {
-    mat4 transform;
+layout(push_constant) uniform PushBlock {
+    uint model_idx;
+    uint start_idx;
 };
 
-layout(binding = 1) buffer restrict readonly VertexIn {
-    vec4 vertexIn[];
+layout(binding = 0) buffer restrict readonly Indices {
+    uint indices[];
 };
 
-layout(binding = 2) buffer restrict writeonly VertexOut {
-    vec4 vertexOut[];
+layout(binding = 1) buffer restrict readonly Vertices {
+    vec4 vertices[];
+};
+
+layout(binding = 2) buffer restrict writeonly Triangles {
+    vec4 tris[];
+};
+
+layout(binding = 3) buffer restrict readonly Model {
+    mat4 models[];
 };
 
 void main() {
 
-    vertexOut[gl_GlobalInvocationID.x] = transform * vertexIn[gl_GlobalInvocationID.x];
+    uint x = gl_GlobalInvocationID.x;
+
+    uint i = indices[x];
+    tris[start_idx + x] = models[model_idx] * vertices[i];
 
 }
 

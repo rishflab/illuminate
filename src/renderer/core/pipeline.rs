@@ -1,4 +1,4 @@
-use gfx_hal::{Backend, Device, DescriptorPool, pso};
+use gfx_hal::{Backend, Device, pso};
 use super::device::DeviceState;
 
 use std::fs;

@@ -7,7 +7,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::io::Read;
 use std::path::Path;
-use std::slice::Iter;
 use crate::renderer::ENTRY_NAME;
 use crate::renderer::core::device::DeviceState;
 
@@ -144,7 +143,7 @@ impl<B: Backend> Accumulator<B> {
             .expect("Camera ray pipeline layout creation failed");
 
 
-        let mut pipeline = {
+        let pipeline = {
             let shader_entry = pso::EntryPoint {
                 entry: ENTRY_NAME,
                 module: &shader,

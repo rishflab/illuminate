@@ -9,30 +9,24 @@ use crate::window::WindowState;
 use crate::renderer::core::backend::BackendState;
 use crate::renderer::core::device::DeviceState;
 use crate::renderer::core::swapchain::SwapchainState;
-use crate::renderer::core::pipeline::PipelineState;
 use crate::renderer::core::command::CommandState;
 use crate::renderer::core::buffer::BufferState;
-use crate::scene::Scene;
-use crate::renderer::core::descriptor::DescSetLayout;
+use crate::scene::{Scene, MeshView};
 use self::camera_ray_generator::CameraRayGenerator;
 use self::ray_triangle_intersector::RayTriangleIntersector;
 use self::accumulator::Accumulator;
 use self::vertex_skinner::VertexSkinner;
 use self::aabb_calculator::AabbCalculator;
-use crate::renderer::Renderer;
+
 use self::types::Ray;
 use self::types::Intersection;
 use crate::window::DIMS;
 use crate::renderer::WORK_GROUP_SIZE;
 
-use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, format, image, memory, buffer, pool};
+use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, memory, buffer, pool};
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::iter;
-use std::path::Path;
-use gfx_hal::pso::Stage::Vertex;
-use gfx_backend_vulkan::CommandQueue;
 
 pub struct Pathtracer<B: Backend> {
     pub swapchain: SwapchainState<B>,
@@ -47,8 +41,8 @@ pub struct Pathtracer<B: Backend> {
     pub accumulator: Accumulator<B>,
     pub camera_buffer: BufferState<B>,
     pub ray_buffer: BufferState<B>,
-    pub vertex_in_buffer: BufferState<B>,
-    pub vertex_out_buffer: BufferState<B>,
+    pub vertex_buffer: BufferState<B>,
+    pub triangle_buffer: BufferState<B>,
     pub index_buffer: BufferState<B>,
     pub intersection_buffer: BufferState<B>,
     pub aabb_buffer: BufferState<B>,
@@ -66,13 +60,13 @@ impl<B: Backend> Pathtracer<B> {
             &backend.surface,
         )));
 
-        let mut swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
+        let swapchain = SwapchainState::new(&mut backend, Rc::clone(&device));
         println!("created swap chain");
 
         let number_of_images = swapchain.number_of_images();
         println!("backbuffer size: {:?}", number_of_images);
 
-        let mut command = CommandState::new(
+        let command = CommandState::new(
             Rc::clone(&device),
             number_of_images
         );
@@ -90,9 +84,6 @@ impl<B: Backend> Pathtracer<B> {
 
         println!("memory types: {:?}", &backend.adapter.memory_types);
 
-        println!("{:?}", &scene.camera.view_matrix().data.to_vec());
-        println!("{:?}", &scene.mesh.model_matrix().data.to_vec());
-
         let camera_buffer = BufferState::new(
             Rc::clone(&device),
             &backend.adapter.memory_types,
@@ -106,7 +97,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
             buffer::Usage::STORAGE,
-            &scene.mesh.model_matrix().data,
+            &scene.model_matrices()
         );
 
         let ray_buffer = BufferState::empty(
@@ -136,29 +127,26 @@ impl<B: Backend> Pathtracer<B> {
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
-             buffer::Usage::TRANSFER_DST | buffer::Usage::INDEX,
-            scene.mesh.data.no_of_indices() as u64,
+            buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE,
+            scene.total_unique_indices() as u64,
             types::Index(0),
         );
 
-        println!("POSITIONS LEN: {:?}", scene.mesh.data.vertices.len());
-
-        let vertex_in_buffer = BufferState::empty(
+        let vertex_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
-             buffer::Usage::TRANSFER_DST | buffer::Usage::VERTEX,
-            scene.mesh.data.no_of_vertices() as u64,
+            buffer::Usage::TRANSFER_DST | buffer::Usage::STORAGE,
+            scene.total_unique_vertices() as u64,
             types::Vertex([0.0, 0.0, 0.0, 0.0])
-
         );
 
-        let vertex_out_buffer = BufferState::empty(
+        let triangle_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
-            buffer::Usage::VERTEX,
-            scene.mesh.data.no_of_vertices() as u64,
+            buffer::Usage::STORAGE,
+            scene.total_indices() as u64,
             types::Vertex([0.0, 0.0, 0.0, 0.0])
 
         );
@@ -168,7 +156,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
             buffer::Usage::STORAGE,
-            1,
+            scene.mesh_instances.len() as u64,
             types::Aabb{min: [0.0, 0.0, 0.0, 0.0], max: [0.0, 0.0, 0.0, 0.0]}
         );
 
@@ -177,7 +165,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
             buffer::Usage::TRANSFER_SRC,
-            &scene.mesh.data.indices,
+            &scene.index_data(),
         );
 
         let staging_vertex_buffer = BufferState::new(
@@ -185,7 +173,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
             buffer::Usage::TRANSFER_SRC,
-            &scene.mesh.data.vertices,
+            &scene.vertex_data(),
         );
 
         camera_ray_generator.write_desc_set(
@@ -197,21 +185,21 @@ impl<B: Backend> Pathtracer<B> {
         vertex_skinner.write_desc_set(
             Rc::clone(&device),
             model_buffer.get_buffer(),
-            vertex_in_buffer.get_buffer(),
-            vertex_out_buffer.get_buffer(),
+            vertex_buffer.get_buffer(),
+            triangle_buffer.get_buffer(),
+            index_buffer.get_buffer(),
         );
 
         aabb_calculator.write_desc_set(
             Rc::clone(&device),
-            vertex_out_buffer.get_buffer(),
+            triangle_buffer.get_buffer(),
             aabb_buffer.get_buffer(),
         );
 
         ray_triangle_intersector.write_desc_set(
             Rc::clone(&device),
             ray_buffer.get_buffer(),
-            vertex_out_buffer.get_buffer(),
-            index_buffer.get_buffer(),
+            triangle_buffer.get_buffer(),
             intersection_buffer.get_buffer(),
             aabb_buffer.get_buffer(),
         );
@@ -227,58 +215,59 @@ impl<B: Backend> Pathtracer<B> {
         );
 
         // Upload data
-        unsafe {
 
-            let mut transfered_image_fence = device.borrow().device.create_fence(false).expect("Can't create fence");
 
-            let mut staging_pool = device
-                .borrow()
-                .device
-                .create_command_pool_typed(
-                    &device.borrow().queues,
-                    pool::CommandPoolCreateFlags::empty(),
-                )
-                .expect("Can't create staging command pool");
+        let mut transfered_image_fence = device.borrow().device.create_fence(false)
+            .expect("Can't create fence");
 
-            let mut cmd_buffer = staging_pool.acquire_command_buffer::<command::OneShot>();
+        let mut staging_pool = device
+            .borrow()
+            .device
+            .create_command_pool_typed(
+                &device.borrow().queues,
+                pool::CommandPoolCreateFlags::empty(),
+            )
+            .expect("Can't create staging command pool");
 
-            cmd_buffer.begin();
+        let mut cmd_buffer = staging_pool.acquire_command_buffer::<command::OneShot>();
 
-            cmd_buffer.copy_buffer(
-                &staging_index_buffer.get_buffer(),
-                &index_buffer.get_buffer(),
-                &[
-                    command::BufferCopy {
-                        src: 0,
-                        dst: 0,
-                        size: staging_index_buffer.size,
-                    },
-                ],
-            );
+        cmd_buffer.begin();
 
-            cmd_buffer.copy_buffer(
-                &staging_vertex_buffer.get_buffer(),
-                &vertex_in_buffer.get_buffer(),
-                &[
-                    command::BufferCopy {
-                        src: 0,
-                        dst: 0,
-                        size: staging_vertex_buffer.size,
-                    },
-                ],
-            );
+        cmd_buffer.copy_buffer(
+            &staging_index_buffer.get_buffer(),
+            &index_buffer.get_buffer(),
+            &[
+                command::BufferCopy {
+                    src: 0,
+                    dst: 0,
+                    size: staging_index_buffer.size,
+                },
+            ],
+        );
 
-            cmd_buffer.finish();
+        cmd_buffer.copy_buffer(
+            &staging_vertex_buffer.get_buffer(),
+            &vertex_buffer.get_buffer(),
+            &[
+                command::BufferCopy {
+                    src: 0,
+                    dst: 0,
+                    size: staging_vertex_buffer.size,
+                },
+            ],
+        );
 
-            device.borrow_mut().queues.queues[0]
-                .submit_nosemaphores(&[cmd_buffer], Some(&mut transfered_image_fence));
+        cmd_buffer.finish();
 
-            device
-                .borrow()
-                .device
-                .destroy_command_pool(staging_pool.into_raw());
+        device.borrow_mut().queues.queues[0]
+            .submit_nosemaphores(&[cmd_buffer], Some(&mut transfered_image_fence));
 
-        }
+        device
+            .borrow()
+            .device
+            .destroy_command_pool(staging_pool.into_raw());
+
+
 
 
 
@@ -295,8 +284,8 @@ impl<B: Backend> Pathtracer<B> {
             camera_buffer,
             ray_buffer,
             index_buffer,
-            vertex_in_buffer,
-            vertex_out_buffer,
+            vertex_buffer,
+            triangle_buffer,
             intersection_buffer,
             aabb_calculator,
             aabb_buffer,
@@ -366,15 +355,41 @@ impl<B: Backend> Pathtracer<B> {
 
 
             cmd_buffer.bind_compute_pipeline(&self.vertex_skinner.pipeline);
-            cmd_buffer.bind_compute_descriptor_sets(
-                &self.vertex_skinner.layout,
-                0,
-                vec!(
-                    &self.vertex_skinner.desc_set
-                ),
-                &[]
-            );
-            cmd_buffer.dispatch([scene.mesh.data.no_of_vertices() as u32, 1, 1]);
+
+            for view in scene.instance_views(){
+            //let view = &scene.instance_views()[0];
+                cmd_buffer.bind_compute_descriptor_sets(
+                    &self.vertex_skinner.layout,
+                    0,
+                    vec!(
+                        &self.vertex_skinner.desc_set
+                    ),
+                    &[]
+                );
+                cmd_buffer.push_compute_constants(
+                    &self.vertex_skinner.layout,
+                    0,
+                    &[view.instance_id, view.start],
+                );
+
+                cmd_buffer.dispatch([view.length, 1, 1]);
+
+                let t_barrier = memory::Barrier::Buffer{
+                    states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
+                    target: self.triangle_buffer.get_buffer(),
+                    families: None,
+                    range: Some(view.start as u64)..Some((view.start + view.length) as u64)
+                    //range: None..None,
+                };
+
+                cmd_buffer.pipeline_barrier(
+                    pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
+                    memory::Dependencies::empty(),
+                    &[t_barrier],
+                );
+
+
+            }
 
             let ray_barrier = memory::Barrier::Buffer{
                 states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
@@ -383,29 +398,36 @@ impl<B: Backend> Pathtracer<B> {
                 range: None..None
             };
 
-            let vertex_barrier = memory::Barrier::Buffer{
-                states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
-                target: self.vertex_out_buffer.get_buffer(),
-                families: None,
-                range: None..None
-            };
+//            let triangle_barrier = memory::Barrier::Buffer{
+//                states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
+//                target: self.triangle_buffer.get_buffer(),
+//                families: None,
+//                range: None..None
+//            };
 
             cmd_buffer.pipeline_barrier(
                 pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
                 memory::Dependencies::empty(),
-                &[vertex_barrier, ray_barrier],
+                &[ray_barrier,/* triangle_barrier*/],
             );
 
-            cmd_buffer.bind_compute_pipeline(&self.aabb_calculator.pipeline);
-            cmd_buffer.bind_compute_descriptor_sets(
-                &self.aabb_calculator.layout,
-                0,
-                vec!(
-                    &self.aabb_calculator.desc_set
-                ),
-                &[]
-            );
-            cmd_buffer.dispatch([1, 1, 1]);
+            //for view in scene.instance_views(){
+                cmd_buffer.bind_compute_pipeline(&self.aabb_calculator.pipeline);
+                cmd_buffer.bind_compute_descriptor_sets(
+                    &self.aabb_calculator.layout,
+                    0,
+                    vec!(
+                        &self.aabb_calculator.desc_set
+                    ),
+                    &[]
+                );
+//                cmd_buffer.push_compute_constants(
+//                    &self.aabb_calculator.layout,
+//                    0,
+//                    &[view.start, view.start + view.length],
+//                );
+                cmd_buffer.dispatch([36, 1, 1]);
+            //}
 
             let aabb_barrier = memory::Barrier::Buffer{
                 states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,

@@ -1,4 +1,4 @@
-use gfx_hal::{Backend, Device, pso, MemoryType, buffer, memory as m};
+use gfx_hal::{Backend, Device, MemoryType, buffer, memory as m};
 
 use super::device::DeviceState;
 
@@ -9,7 +9,9 @@ use core::mem::size_of;
 
 pub struct BufferState<B: Backend> {
     pub memory: Option<B::Memory>,
-    pub buffer: Option<B::Buffer>,
+    pub buffer: Option<
+
+        B::Buffer>,
     pub device: Rc<RefCell<DeviceState<B>>>,
     pub size: u64,
 }
@@ -25,7 +27,7 @@ impl<B: Backend> BufferState<B> {
         memory_properties: m::Properties,
         usage: buffer::Usage,
         length: u64,
-        t: T) -> Self{
+        _t: T) -> Self{
 
         let (memory, buffer, size) = {
 
@@ -51,7 +53,7 @@ impl<B: Backend> BufferState<B> {
 
             println!("memory upload type: {:?}", upload_type);
 
-            let mut memory = device.allocate_memory(upload_type, mem_req.size).unwrap();
+            let memory = device.allocate_memory(upload_type, mem_req.size).unwrap();
 
             device.bind_buffer_memory(&memory, 0, &mut buffer).unwrap();
 
@@ -77,8 +79,11 @@ impl<B: Backend> BufferState<B> {
         data: &[T],
     ) -> Self
         where
-            T: Copy,
+            T: Copy + std::fmt::Debug,
     {
+
+        println!("data to write: {:?}", data);
+
         let (buffer, memory, size) = {
 
             let memory: B::Memory;
@@ -137,65 +142,65 @@ impl<B: Backend> BufferState<B> {
         }
     }
 
-    unsafe fn init_data<T>(
-        device_ptr: Rc<RefCell<DeviceState<B>>>,
-        data_source: &[T],
-        usage: buffer::Usage,
-        memory_types: &[MemoryType],
-    ) -> (B::Buffer, B::Memory, u64)
-        where
-            T: Copy,
-    {
-        let memory: B::Memory;
-        let mut buffer: B::Buffer;
-        let size: u64;
-
-        let stride = size_of::<T>() as u64;
-        let upload_size = data_source.len() as u64 * stride;
-
-        println!("upload size: {:?}", upload_size);
-
-        {
-            let device = &device_ptr.borrow().device;
-
-            buffer = device.create_buffer(upload_size, usage).unwrap();
-            let mem_req = device.get_buffer_requirements(&buffer);
-
-            // A note about performance: Using CPU_VISIBLE memory is convenient because it can be
-            // directly memory mapped and easily updated by the CPU, but it is very slow and so should
-            // only be used for small pieces of data that need to be updated very frequently. For something like
-            // a vertex buffer that may be much larger and should not change frequently, you should instead
-            // use a DEVICE_LOCAL buffer that gets filled by copying data from a CPU_VISIBLE staging buffer.
-            let upload_type = memory_types
-                .iter()
-                .enumerate()
-                .position(|(id, mem_type)| {
-                    mem_req.type_mask & (1 << id) != 0
-                        && mem_type.properties.contains(m::Properties::DEVICE_LOCAL | m::Properties::CPU_VISIBLE | m::Properties::COHERENT)
-                })
-                .unwrap()
-                .into();
-
-            memory = device.allocate_memory(upload_type, mem_req.size).unwrap();
-            device.bind_buffer_memory(&memory, 0, &mut buffer).unwrap();
-            size = mem_req.size;
-
-            // TODO: check transitions: read/write mapping and vertex buffer read
-            {
-                let mut data_target = device
-                    .acquire_mapping_writer::<T>(&memory, 0..size)
-                    .unwrap();
-                data_target[0..data_source.len()].copy_from_slice(data_source);
-                device.release_mapping_writer(data_target).unwrap();
-            }
-
-        }
-
-        println!("memory written");
-
-        (buffer, memory, size)
-
-    }
+//    unsafe fn init_data<T>(
+//        device_ptr: Rc<RefCell<DeviceState<B>>>,
+//        data_source: &[T],
+//        usage: buffer::Usage,
+//        memory_types: &[MemoryType],
+//    ) -> (B::Buffer, B::Memory, u64)
+//        where
+//            T: Copy,
+//    {
+//        let memory: B::Memory;
+//        let mut buffer: B::Buffer;
+//        let size: u64;
+//
+//        let stride = size_of::<T>() as u64;
+//        let upload_size = data_source.len() as u64 * stride;
+//
+//        println!("upload size: {:?}", upload_size);
+//
+//        {
+//            let device = &device_ptr.borrow().device;
+//
+//            buffer = device.create_buffer(upload_size, usage).unwrap();
+//            let mem_req = device.get_buffer_requirements(&buffer);
+//
+//            // A note about performance: Using CPU_VISIBLE memory is convenient because it can be
+//            // directly memory mapped and easily updated by the CPU, but it is very slow and so should
+//            // only be used for small pieces of data that need to be updated very frequently. For something like
+//            // a vertex buffer that may be much larger and should not change frequently, you should instead
+//            // use a DEVICE_LOCAL buffer that gets filled by copying data from a CPU_VISIBLE staging buffer.
+//            let upload_type = memory_types
+//                .iter()
+//                .enumerate()
+//                .position(|(id, mem_type)| {
+//                    mem_req.type_mask & (1 << id) != 0
+//                        && mem_type.properties.contains(m::Properties::DEVICE_LOCAL | m::Properties::CPU_VISIBLE | m::Properties::COHERENT)
+//                })
+//                .unwrap()
+//                .into();
+//
+//            memory = device.allocate_memory(upload_type, mem_req.size).unwrap();
+//            device.bind_buffer_memory(&memory, 0, &mut buffer).unwrap();
+//            size = mem_req.size;
+//
+//            // TODO: check transitions: read/write mapping and vertex buffer read
+//            {
+//                let mut data_target = device
+//                    .acquire_mapping_writer::<T>(&memory, 0..size)
+//                    .unwrap();
+//                data_target[0..data_source.len()].copy_from_slice(data_source);
+//                device.release_mapping_writer(data_target).unwrap();
+//            }
+//
+//        }
+//
+//        println!("memory written");
+//
+//        (buffer, memory, size)
+//
+//    }
 
     pub fn update_data<T>(
         &mut self, offset:

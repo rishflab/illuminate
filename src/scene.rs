@@ -1,101 +1,124 @@
+pub mod camera;
+pub mod static_mesh;
+
 use nalgebra_glm as glm;
 
-use crate::input::Command;
 use crate::asset::{load_gltf, MeshData};
-use glm::rotation;
+use camera::Camera;
+use static_mesh::StaticMesh;
+use crate::scene::static_mesh::MeshInstance;
 
 pub struct Scene {
     pub camera: Camera,
-    pub mesh: Mesh,
+    pub meshes: Vec<StaticMesh>,
+    pub mesh_instances: Vec<MeshInstance>,
 }
 
-pub struct Camera {
-    pub position: glm::Vec3,
-    pub look_at: glm::Vec3,
-    look_up: glm::Vec3,
-}
-
-impl Camera {
-
-    pub fn new(position: glm::Vec3, look_at: glm::Vec3) -> Self {
-        Camera{
-            position,
-            look_at,
-            look_up: glm::vec3(0.0, 1.0, 0.0)
-        }
-    }
-
-    pub fn update_position(&mut self, command: Command) {
-
-        match command {
-            Command::MoveLeft => {
-                self.position = self.position + glm::vec3(-0.1, 0.0, 0.0);
-                self.look_at = self.look_at + glm::vec3(-0.1, 0.0, 0.0);
-            },
-            Command::MoveRight => {
-                self.position = self.position + glm::vec3(0.1, 0.0, 0.0);
-                self.look_at = self.look_at + glm::vec3(0.1, 0.0, 0.0);
-            },
-            _ => (),
-
-        }
-    }
-
-    pub fn view_matrix(&self) -> glm::Mat4 {
-        glm::inverse(
-            &glm::look_at(
-                &self.position,
-                &self.look_at,
-                &self.look_up
-            )
-        )
-    }
-}
-
-pub struct Mesh {
-    pub position: glm::Vec3,
-    pub scale: glm::Vec3,
-    pub rotation: glm::Vec3,
-    pub data: MeshData,
-}
-
-impl Mesh {
-    pub fn model_matrix(&self) -> glm::Mat4 {
-        let translation = glm::translation(&self.position);
-        let rotation = glm::inverse(&glm::look_at(
-            &self.position,
-            &(self.position + self.rotation),
-            &glm::vec3(0.0,1.0,0.0)
-        ));
-        let scale = glm::scaling(&self.scale);
-        translation * rotation * scale
-    }
-
-    pub fn update_position(&mut self, command: Command) {
-        match command {
-            Command::MoveLeft => {
-                self.position = self.position + glm::vec3(-0.1, 0.0, 0.0);
-            },
-            Command::MoveRight => {
-                self.position = self.position + glm::vec3(0.1, 0.0, 0.0);
-            },
-            _ => (),
-        }
-    }
+#[derive(Debug)]
+pub struct MeshView {
+    pub instance_id: u32,
+    pub start: u32,
+    pub length: u32,
 }
 
 impl Scene {
+    pub fn total_unique_vertices(&self) -> usize {
+        self.meshes.iter()
+            .map(|mesh|{
+                mesh.vertices.len()
+            })
+            .sum()
+    }
 
-    pub fn cube() -> Self {
+    pub fn total_unique_indices(&self) -> usize {
+        self.meshes.iter()
+            .map(|mesh|{
+                mesh.indices.len()
+            })
+            .sum()
+    }
+
+    pub fn total_indices(&self) -> usize {
+        self.mesh_instances.iter()
+            .map(|instance|{
+                self.meshes[instance.mesh_id].indices.len()
+            })
+            .sum()
+    }
+
+    pub fn index_data(&self) -> Vec<u32> {
+        self.meshes.iter()
+            .map(|mesh|{
+                mesh.indices.clone()
+            })
+            .flatten()
+            .collect()
+
+    }
+
+    pub fn vertex_data(&self) -> Vec<f32> {
+        self.meshes.iter()
+            .map(|mesh|{
+                mesh.vertices.clone()
+            })
+            .flatten()
+            .map(|vert|{
+                vert.data.to_vec()
+            })
+            .flatten()
+            .collect()
+    }
+
+    pub fn instance_views(&self) -> Vec<MeshView> {
+        let mut views = Vec::new();
+        let mut start = 0;
+        let mut id = 0;
+        for instance in self.mesh_instances.iter(){
+            views.push(MeshView{
+                instance_id: id as u32,
+                start: start,
+                length: self.meshes[instance.mesh_id].indices.len() as u32
+            });
+            id += 1;
+            start += self.meshes[instance.mesh_id].indices.len() as u32;
+        }
+        views
+    }
+
+    pub fn model_matrices(&self) -> Vec<f32> {
+        self.mesh_instances.iter()
+            .map(|instance|{
+                instance.model_matrix().data.to_vec()
+            })
+            .flatten()
+            .collect()
+    }
+
+    pub fn two_cubes() -> Self {
         let asset_folder = "assets";
-        let gltf = load_gltf(asset_folder, "untitled.gltf").expect("failed to load gltf");
+        let gltf = load_gltf(asset_folder, "untitled.gltf")
+                .expect("failed to load gltf");
+
         let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
 
-        let mesh = Mesh {
-            position: glm::vec3(0.0, 0.0, 0.0),
+        let cube_mesh = StaticMesh {
+            id: 0,
+            indices: mesh_data.indices.clone(),
+            vertices: mesh_data.vertices.clone(),
+        };
+
+        let cube1 = MeshInstance {
+            position: glm::vec3(-1.0, 0.0, 0.0),
             scale: glm::vec3(1.0, 1.0, 1.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
-            data: mesh_data,
+            mesh_id: cube_mesh.id,
+        };
+
+        let cube2 = MeshInstance {
+            position: glm::vec3(1.0, 0.0, 0.0),
+            scale: glm::vec3(1.0, 1.0, 1.0),
+            rotation: glm::vec3(0.0, 0.0, 1.0),
+            mesh_id: cube_mesh.id,
         };
 
         let camera = Camera::new(
@@ -105,31 +128,72 @@ impl Scene {
 
         Scene {
             camera,
-            mesh
+            meshes: vec![cube_mesh],
+            mesh_instances: vec![cube1, cube2],
+
         }
     }
 
-    pub fn cat() -> Self {
+    pub fn cube() -> Self {
         let asset_folder = "assets";
-        let gltf = load_gltf(asset_folder, "cat.gltf").expect("failed to load gltf");
+        let gltf = load_gltf(asset_folder, "untitled.gltf")
+            .expect("failed to load gltf");
         let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
 
-        let mesh = Mesh {
-            position: glm::vec3(0.0, 0.0, 0.0),
+        let cube_mesh = StaticMesh {
+            id: 0,
+            indices: mesh_data.indices.clone(),
+            vertices: mesh_data.vertices.clone(),
+        };
+
+        let cube1 = MeshInstance {
+            position: glm::vec3(1.0, 0.0, 0.0),
             scale: glm::vec3(1.0, 1.0, 1.0),
-            rotation: glm::vec3(0.0, 0.0, 0.0),
-            data: mesh_data,
+            rotation: glm::vec3(0.0, 0.0, 1.0),
+            mesh_id: cube_mesh.id,
         };
 
         let camera = Camera::new(
-            glm::vec3(0.0,200.0,1000.0),
-            glm::vec3(0.0,0.0,0.0),
+            glm::vec3(0.0, 2.0, 10.0),
+            glm::vec3( 0.0, 0.0, 0.0)
         );
 
-        Scene {
+        let scene = Scene {
             camera,
-            mesh
-        }
+            meshes: vec![cube_mesh],
+            mesh_instances: vec![cube1],
+
+        };
+
+        println!("mesh instance views: {:?}", scene.instance_views());
+        println!("total indices: {:?}", scene.total_indices());
+
+        scene
     }
+//
+//    pub fn cat() -> Self {
+//        let asset_folder = "assets";
+//        let gltf = load_gltf(asset_folder, "cat.gltf").expect("failed to load gltf");
+//        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
+//
+//        let mesh = StaticMesh {
+//            position: glm::vec3(0.0, 0.0, 0.0),
+//            scale: glm::vec3(1.0, 1.0, 1.0),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            indices: mesh_data.indices.clone(),
+//            vertices: mesh_data.vertices.clone(),
+//            handle: glm::vec2(0, 36),
+//        };
+//
+//        let camera = Camera::new(
+//            glm::vec3(0.0,200.0,1000.0),
+//            glm::vec3(0.0,0.0,0.0),
+//        );
+//
+//        Scene {
+//            camera,
+//            meshes: vec![mesh]
+//        }
+//    }
 
 }

@@ -6,7 +6,6 @@ use crate::window::WindowState;
 use crate::scene::Scene;
 
 use gfx_hal::{Backend, format, image};
-use gfx_hal::window::Extent2D;
 
 const ENTRY_NAME: &str = "main";
 

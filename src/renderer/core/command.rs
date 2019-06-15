@@ -1,11 +1,10 @@
-use gfx_hal::{Backend, Device, pso, pool, image as i, format as f, DescriptorPool, command, CommandPool, Compute, command::MultiShot, command::CommandBuffer};
+use gfx_hal::{Backend, Device, pool, command, CommandPool, Compute,
+              command::MultiShot, command::CommandBuffer};
 use super::device::DeviceState;
-use super::swapchain::SwapchainState;
-use crate::renderer::COLOR_RANGE;
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::slice::Iter;
+
 
 pub struct CommandState<B: Backend> {
     pub command_pools: Vec<CommandPool<B, Compute>>,
@@ -37,7 +36,7 @@ impl<B: Backend> CommandState<B> {
         // plus one extra which we can guarantee is unused at any given time by swapping it out with the ones
         // in the rest of the queue.
         let mut image_acquire_semaphores = Vec::with_capacity(frame_images_len);
-        let mut free_acquire_semaphore = device.create_semaphore().expect("Could not create semaphore");
+        let free_acquire_semaphore = device.create_semaphore().expect("Could not create semaphore");
 
         // The number of the rest of the resources is based on the frames in flight.
         let mut submission_complete_semaphores = Vec::with_capacity(frames_in_flight);
@@ -55,13 +54,13 @@ impl<B: Backend> CommandState<B> {
         let mut cmd_buffers = Vec::with_capacity(frames_in_flight);
 
         for _ in 0..frames_in_flight {
-            unsafe {
-                cmd_pools.push(
-                    device
-                        .create_command_pool_typed(&device_state.borrow().queues, pool::CommandPoolCreateFlags::empty())
-                        .expect("Can't create command pool"),
-                );
-            }
+
+            cmd_pools.push(
+                device
+                    .create_command_pool_typed(&device_state.borrow().queues, pool::CommandPoolCreateFlags::empty())
+                    .expect("Can't create command pool"),
+            );
+
         }
 
         for _ in 0..frame_images_len {

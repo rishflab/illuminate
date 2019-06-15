@@ -4,39 +4,51 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-struct Ray{
+struct Ray {
     vec4 origin;
     vec4 direction;
 };
 
-struct Intersection{
+struct Intersection {
     vec4 color;
 };
 
-struct Aabb{
+struct Aabb {
     vec4 min;
     vec4 max;
 };
+
+//struct MeshHandle {
+//    mat4 transform;
+//    uint start;
+//    uint end;
+//    uint instance;
+//    uint size;
+//};
 
 layout(std430, binding = 0) buffer restrict readonly Rays {
     Ray rays[800][800];
 };
 
-layout(binding = 1) buffer restrict readonly Indices {
-    uint indices[];
+//layout(binding = 1) buffer restrict readonly Indices {
+//    uint indices[];
+//};
+
+layout(binding = 1) buffer restrict readonly Triangles {
+    vec4 tris[];
 };
 
-layout(binding = 2) buffer restrict readonly VertexOut {
-    vec4 vertexOut[];
-};
-
-layout(std430, binding = 3) buffer restrict writeonly Intersections {
+layout(std430, binding = 2) buffer restrict writeonly Intersections {
     Intersection intersections[800][800];
 };
 
-layout(std430, binding = 4) buffer restrict readonly BoundingBox {
-    Aabb aabb[];
+layout(std430, binding = 3) buffer restrict readonly BoundingBox {
+    Aabb aabbs[];
 };
+
+//layout(std430, binding = 5) buffer restrict readonly MeshHandle {
+//    MeshHandle mesh_handles[];
+//};
 
 struct Light {
     vec3 position;
@@ -84,35 +96,51 @@ void main(){
 
     vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
-    if (IntersectBox(ray, aabb[0]) ==  true) {
+//    for (uint k = 0; k < aabbs.length(); k++){
+//
+//        Aabb aabb = aabbs[k];
 
-        for (uint j = 0; j < (indices.length()/3); j++){
+        //if (IntersectBox(ray, aabb) ==  true) {
 
-            uint i = 3*j;
-            uint i0 = indices[i];
-            uint i1 = indices[i+1];
-            uint i2 = indices[i+2];
+            for (uint j = 0; j < tris.length(); j=j+3){
 
-            vec3 v0 = vertexOut[i0].xyz;
-            vec3 v1 = vertexOut[i1].xyz;
-            vec3 v2 = vertexOut[i2].xyz;
+//                uint i = 3*j;
+//                uint i0 = indices[j];
+//                uint i1 = indices[j+1];
+//                uint i2 = indices[j+2];
 
-            bool a = intersectTriangle(ray, v0, v1, v2);
+                vec3 v0 = tris[j].xyz;
+                vec3 v1 = tris[j+1].xyz;
+                vec3 v2 = tris[j+2].xyz;
 
-            if (a == true){
-                to_write = vec4(0.0, 1.0, 0.0, 1.0);
-                intersections[current.x][current.y] = Intersection(to_write);
-                break;
+                vec4 cmp = vec4(-1.0, 1.0, 1.0, 1.0);
+//                (1.0, 1.0, -1.0, 1.0)
+//                (-1.0, 1.0, -1.0, 1.0)
+
+                bool a = intersectTriangle(ray, v0, v1, v2);
+
+                if (a == true){
+                    to_write = vec4(0.0, 1.0, 0.0, 1.0);
+//                    if (tris.length() == 72){
+//                        to_write = vec4(1.0, 0.0, 0.0, 1.0);
+////                        if (tris[35] == cmp){
+////                            to_write = vec4(0.0, 1.0, 0.0, 1.0);
+////                        }
+//                    }
+                    intersections[current.x][current.y] = Intersection(to_write);
+                    break;
+                }
+                else {
+                    intersections[current.x][current.y] = Intersection(to_write);
+                }
             }
-            else {
-                intersections[current.x][current.y] = Intersection(to_write);
-            }
 
+            //break;
 
-        }
-    } else {
-        intersections[current.x][current.y] = Intersection(to_write);
-    }
+//        } else {
+//            intersections[current.x][current.y] = Intersection(to_write);
+//        }
+//    }
 
 
 }
