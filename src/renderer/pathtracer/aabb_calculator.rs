@@ -102,7 +102,7 @@ impl<B: Backend> AabbCalculator<B> {
 
         let desc_set = pool.allocate_set(&set_layout).expect("Camera ray set allocation failed");
 
-        let push_constants = vec![(pso::ShaderStageFlags::COMPUTE, 0..2)];
+        let push_constants = vec![(pso::ShaderStageFlags::COMPUTE, 0..3)];
 
         let layout = device.create_pipeline_layout(Some(&set_layout), push_constants)
             .expect("Camera ray pipeline layout creation failed");

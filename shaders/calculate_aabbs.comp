@@ -5,6 +5,7 @@ layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 layout(push_constant) uniform PushBlock {
     uint start_idx;
     uint end_idx;
+    uint mesh_id;
 };
 
 struct Aabb {
@@ -22,29 +23,26 @@ layout(std430, binding = 1) buffer BoundingBox {
 
 void main() {
 
-//    uint current = gl_GlobalInvocationID.x;
-//
-//    Aabb aabb = aabbs[current];
-//
-//    vec4 min = vertices[0];
-//    vec4 max = vertices[0];
-//
-//    for (uint i = 1; i < 36; i++){
-//
-//        if ( vertices[i].x < min.x ) min.x = vertices[i].x;
-//        if ( vertices[i].y < min.y ) min.y = vertices[i].y;
-//        if ( vertices[i].z < min.z ) min.z = vertices[i].z;
-//
-//        if ( vertices[i].x > max.x ) max.x = vertices[i].x;
-//        if ( vertices[i].y > max.y ) max.y = vertices[i].y;
-//        if ( vertices[i].z > max.z ) max.z = vertices[i].z;
-//
-//    }
-//
-//    aabb.min = min;
-//    aabb.max = max;
-//
-//    aabbs[current] = aabb;
+    Aabb aabb = aabbs[mesh_id];
+
+    vec4 min = vertices[start_idx];
+    vec4 max = vertices[start_idx];
+
+    for (uint i = start_idx + 1; i < end_idx; i++){
+
+        if ( vertices[i].x < min.x ) min.x = vertices[i].x;
+        if ( vertices[i].y < min.y ) min.y = vertices[i].y;
+        if ( vertices[i].z < min.z ) min.z = vertices[i].z;
+
+        if ( vertices[i].x > max.x ) max.x = vertices[i].x;
+        if ( vertices[i].y > max.y ) max.y = vertices[i].y;
+        if ( vertices[i].z > max.z ) max.z = vertices[i].z;
+    }
+
+    aabb.min = min;
+    aabb.max = max;
+
+    aabbs[mesh_id] = aabb;
 
 }
 

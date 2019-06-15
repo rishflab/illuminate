@@ -267,10 +267,6 @@ impl<B: Backend> Pathtracer<B> {
             .device
             .destroy_command_pool(staging_pool.into_raw());
 
-
-
-
-
         Pathtracer {
             swapchain: swapchain,
             device: device,
@@ -357,7 +353,6 @@ impl<B: Backend> Pathtracer<B> {
             cmd_buffer.bind_compute_pipeline(&self.vertex_skinner.pipeline);
 
             for view in scene.instance_views(){
-            //let view = &scene.instance_views()[0];
                 cmd_buffer.bind_compute_descriptor_sets(
                     &self.vertex_skinner.layout,
                     0,
@@ -387,8 +382,6 @@ impl<B: Backend> Pathtracer<B> {
                     memory::Dependencies::empty(),
                     &[t_barrier],
                 );
-
-
             }
 
             let ray_barrier = memory::Barrier::Buffer{
@@ -398,21 +391,16 @@ impl<B: Backend> Pathtracer<B> {
                 range: None..None
             };
 
-//            let triangle_barrier = memory::Barrier::Buffer{
-//                states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
-//                target: self.triangle_buffer.get_buffer(),
-//                families: None,
-//                range: None..None
-//            };
-
             cmd_buffer.pipeline_barrier(
                 pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
                 memory::Dependencies::empty(),
-                &[ray_barrier,/* triangle_barrier*/],
+                &[ray_barrier],
             );
 
-            //for view in scene.instance_views(){
-                cmd_buffer.bind_compute_pipeline(&self.aabb_calculator.pipeline);
+            cmd_buffer.bind_compute_pipeline(&self.aabb_calculator.pipeline);
+
+
+            for view in scene.instance_views() {
                 cmd_buffer.bind_compute_descriptor_sets(
                     &self.aabb_calculator.layout,
                     0,
@@ -421,26 +409,26 @@ impl<B: Backend> Pathtracer<B> {
                     ),
                     &[]
                 );
-//                cmd_buffer.push_compute_constants(
-//                    &self.aabb_calculator.layout,
-//                    0,
-//                    &[view.start, view.start + view.length],
-//                );
-                cmd_buffer.dispatch([36, 1, 1]);
-            //}
+                cmd_buffer.push_compute_constants(
+                    &self.aabb_calculator.layout,
+                    0,
+                    &[view.start, view.start + view.length, view.instance_id],
+                );
+                cmd_buffer.dispatch([scene.mesh_instances.len() as u32, 1, 1]);
 
-            let aabb_barrier = memory::Barrier::Buffer{
-                states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
-                target: self.aabb_buffer.get_buffer(),
-                families: None,
-                range: None..None
-            };
+                let aabb_barrier = memory::Barrier::Buffer{
+                    states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
+                    target: self.aabb_buffer.get_buffer(),
+                    families: None,
+                    range: None..None
+                };
 
-            cmd_buffer.pipeline_barrier(
-                pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
-                memory::Dependencies::empty(),
-                &[aabb_barrier],
-            );
+                cmd_buffer.pipeline_barrier(
+                    pso::PipelineStage::COMPUTE_SHADER..pso::PipelineStage::COMPUTE_SHADER,
+                    memory::Dependencies::empty(),
+                    &[aabb_barrier],
+                );
+            }
 
             cmd_buffer.bind_compute_pipeline(&self.ray_triangle_intersector.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
@@ -494,22 +482,14 @@ impl<B: Backend> Pathtracer<B> {
             self.device.borrow_mut().queues.queues[0]
                 .submit(submission, Some(&self.command.submission_complete_fences[frame_idx]));
 
-
             // present frame
             self.swapchain.swapchain.present(
                 &mut self.device.borrow_mut().queues.queues[0],
                 swap_image as gfx_hal::SwapImageIndex,
                 Some(&self.command.submission_complete_semaphores[frame_idx]),
             );
-
         }
         // Increment our frame
         self.command.frame += 1;
-
-
     }
-
-
-
-
 }

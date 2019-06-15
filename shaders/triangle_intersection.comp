@@ -18,21 +18,9 @@ struct Aabb {
     vec4 max;
 };
 
-//struct MeshHandle {
-//    mat4 transform;
-//    uint start;
-//    uint end;
-//    uint instance;
-//    uint size;
-//};
-
 layout(std430, binding = 0) buffer restrict readonly Rays {
     Ray rays[800][800];
 };
-
-//layout(binding = 1) buffer restrict readonly Indices {
-//    uint indices[];
-//};
 
 layout(binding = 1) buffer restrict readonly Triangles {
     vec4 tris[];
@@ -45,10 +33,6 @@ layout(std430, binding = 2) buffer restrict writeonly Intersections {
 layout(std430, binding = 3) buffer restrict readonly BoundingBox {
     Aabb aabbs[];
 };
-
-//layout(std430, binding = 5) buffer restrict readonly MeshHandle {
-//    MeshHandle mesh_handles[];
-//};
 
 struct Light {
     vec3 position;
@@ -96,37 +80,22 @@ void main(){
 
     vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
-//    for (uint k = 0; k < aabbs.length(); k++){
-//
-//        Aabb aabb = aabbs[k];
+    for (uint k = 0; k < aabbs.length(); k++){
 
-        //if (IntersectBox(ray, aabb) ==  true) {
+        Aabb aabb = aabbs[k];
+
+        if (IntersectBox(ray, aabb) ==  true) {
 
             for (uint j = 0; j < tris.length(); j=j+3){
-
-//                uint i = 3*j;
-//                uint i0 = indices[j];
-//                uint i1 = indices[j+1];
-//                uint i2 = indices[j+2];
 
                 vec3 v0 = tris[j].xyz;
                 vec3 v1 = tris[j+1].xyz;
                 vec3 v2 = tris[j+2].xyz;
 
-                vec4 cmp = vec4(-1.0, 1.0, 1.0, 1.0);
-//                (1.0, 1.0, -1.0, 1.0)
-//                (-1.0, 1.0, -1.0, 1.0)
-
                 bool a = intersectTriangle(ray, v0, v1, v2);
 
                 if (a == true){
                     to_write = vec4(0.0, 1.0, 0.0, 1.0);
-//                    if (tris.length() == 72){
-//                        to_write = vec4(1.0, 0.0, 0.0, 1.0);
-////                        if (tris[35] == cmp){
-////                            to_write = vec4(0.0, 1.0, 0.0, 1.0);
-////                        }
-//                    }
                     intersections[current.x][current.y] = Intersection(to_write);
                     break;
                 }
@@ -134,13 +103,12 @@ void main(){
                     intersections[current.x][current.y] = Intersection(to_write);
                 }
             }
+            break;
 
-            //break;
-
-//        } else {
-//            intersections[current.x][current.y] = Intersection(to_write);
-//        }
-//    }
+        } else {
+            intersections[current.x][current.y] = Intersection(to_write);
+        }
+    }
 
 
 }
