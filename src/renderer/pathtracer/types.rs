@@ -4,7 +4,15 @@ pub struct Ray {
 }
 
 pub struct Intersection {
-    pub color: [f32; 4],
+    pub position: [f32; 4],
+    pub normal: [f32; 4],
+    pub edge: [f32; 4],
+    pub float: f32,
+}
+
+pub struct PointLight{
+    pub position: [f32; 4],
+    pub intensity: f32,
 }
 
 pub struct Index(pub u32);

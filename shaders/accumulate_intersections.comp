@@ -1,14 +1,29 @@
 #version 450
 
+#define EPSILON 0.0001
+
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 struct Intersection {
-    vec4 color;
+    vec4 position;
+    vec4 normal;
+    vec3 edge;
+    float a;
 };
 
-layout(set = 0, binding = 0, rgba8) uniform restrict writeonly image2D img;
+struct Light {
+    vec4 position;
+    float intensity;
+};
 
-layout(set = 1, std430, binding = 0) buffer restrict readonly Intersections {
+layout(binding = 0, rgba8) uniform image2D img;
+
+
+layout(set = 1, binding = 0) uniform Lights {
+    Light lights[];
+};
+
+layout(set = 1, std430, binding = 1) buffer Intersections {
     Intersection intersections[800][800];
 };
 
@@ -17,10 +32,55 @@ void main() {
 
     uvec2 current = gl_GlobalInvocationID.xy;
 
-    vec4 result = intersections[current.x][current.y].color;
+    Intersection intersection = intersections[current.x][current.y];
 
-    //result = vec4(1.0, 0.0, 0.0, 1.0);
+    Light light = lights[0];
 
-    imageStore(img, ivec2(current.xy), result);
+    vec4 to_write = vec4(1.0, 0.0, 1.0, 1.0);
+
+    if (light.intensity == 20.0) {
+        to_write = vec4(1.0, 0.0, 0.0, 1.0);
+    }
+
+    if (intersection.a > EPSILON) {
+
+        vec4 light_direction = normalize(light.position - intersection.position);
+
+        //float light_distance = distance(light.position, intersection.position);
+
+        float shade = 0.0;
+
+        vec3 P = cross(light_direction.xyz, intersection.edge.xyz);
+
+        float det = dot(intersection.edge.xyz, P);
+
+        if (det < EPSILON ) {
+
+            shade =  (0.01 * 20 * 1/dot(light_direction, intersection.normal));
+
+            //shade = light_angle * 30.0 * (1 / (light_distance * light_distance));
+        }
+
+        to_write = vec4(shade, shade, shade, 1.0);
+
+        //to_write = vec4(light.position);
+
+//        if (light.position == vec4(0.0, 0.0, 1.0, 0.0)) {
+//            to_write = vec4(0.0, 1.0, 0.0, 1.0);
+//
+//        }
+
+//        if (view[0][0] == 1.0) {
+//            to_write = vec4(1.0, 0.0, 1.0, 1.0);
+//
+//        } else {
+//            to_write = vec4(0.0, 1.0, 0.0, 1.0);
+//        }
+
+
+    }
+
+
+    imageStore(img, ivec2(current.xy), to_write);
 
 }

@@ -47,6 +47,7 @@ pub struct Pathtracer<B: Backend> {
     pub intersection_buffer: BufferState<B>,
     pub aabb_buffer: BufferState<B>,
     pub model_buffer: BufferState<B>,
+    pub light_buffer: BufferState<B>,
 }
 
 impl<B: Backend> Pathtracer<B> {
@@ -100,6 +101,24 @@ impl<B: Backend> Pathtracer<B> {
             &scene.model_matrices()
         );
 
+        let light_buffer = BufferState::new(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            memory::Properties::CPU_VISIBLE | memory::Properties::DEVICE_LOCAL,
+            buffer::Usage::STORAGE | buffer::Usage::TRANSFER_DST | buffer::Usage::TRANSFER_SRC,
+            //&scene.camera.view_matrix().data,
+            &scene.light_data(),
+        );
+
+//        let light_buffer = BufferState::empty(
+//            Rc::clone(&device),
+//            &backend.adapter.memory_types,
+//            memory::Properties::CPU_VISIBLE ,
+//            buffer::Usage::STORAGE,
+//            1 as u64,
+//            1.0
+//        );
+
         let ray_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
@@ -119,7 +138,10 @@ impl<B: Backend> Pathtracer<B> {
              buffer::Usage::STORAGE,
             (DIMS.width * DIMS.height) as u64,
             Intersection{
-                color: [0.0, 0.0, 0.0, 0.0],
+                position: [0.0, 0.0, 0.0, 0.0],
+                normal: [0.0, 0.0, 0.0, 0.0],
+                edge: [0.0, 0.0, 0.0, 0.0],
+                float: 0.0
             }
         );
 
@@ -207,15 +229,13 @@ impl<B: Backend> Pathtracer<B> {
         accumulator.write_desc_set(
             Rc::clone(&device),
             intersection_buffer.get_buffer(),
+            light_buffer.get_buffer()
         );
 
         accumulator.write_frame_desc_sets(
             Rc::clone(&device),
             swapchain.get_image_views(),
         );
-
-        // Upload data
-
 
         let mut transfered_image_fence = device.borrow().device.create_fence(false)
             .expect("Can't create fence");
@@ -286,10 +306,12 @@ impl<B: Backend> Pathtracer<B> {
             aabb_calculator,
             aabb_buffer,
             model_buffer,
+            light_buffer
         }
     }
 
-    pub fn render(&mut self, scene: &Scene) {
+    pub fn render(&mut
+                  self, scene: &Scene) {
 
         self.camera_buffer.update_data(0, &scene.camera.view_matrix().data);
 
@@ -343,7 +365,7 @@ impl<B: Backend> Pathtracer<B> {
                 &self.camera_ray_generator.layout,
                 0,
                 vec!(
-                    &self.camera_ray_generator.desc_set
+                    &self.camera_ray_generator.desc_set,
                 ),
                 &[]
             );
@@ -461,12 +483,13 @@ impl<B: Backend> Pathtracer<B> {
                 0,
                 vec!(
                     &self.accumulator.frame_desc_sets[frame_idx],
-                    &self.accumulator.desc_set
+                    &self.accumulator.desc_set,
                 ),
                 &[]
             );
 
             cmd_buffer.dispatch([DIMS.width/WORK_GROUP_SIZE, DIMS.height/WORK_GROUP_SIZE, 1]);
+
 
             cmd_buffer.finish();
 

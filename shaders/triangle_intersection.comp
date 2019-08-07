@@ -10,7 +10,10 @@ struct Ray {
 };
 
 struct Intersection {
-    vec4 color;
+    vec4 position;
+    vec4 normal;
+    vec3 edge;
+    float a;
 };
 
 struct Aabb {
@@ -34,26 +37,26 @@ layout(std430, binding = 3) buffer restrict readonly BoundingBox {
     Aabb aabbs[];
 };
 
-struct Light {
-    vec3 position;
-    float intensity;
-};
-
-bool intersectTriangle(Ray ray, vec3 v1, vec3 v2, vec3 v3){
+Intersection intersectTriangle(Ray ray, vec3 v1, vec3 v2, vec3 v3){
     const vec3 e1 = v2 - v1;
     const vec3 e2 = v3 - v1;
     const vec3 s1 = cross(ray.direction.xyz, e2);
-    const float  invd = 1.0f/(dot(e1, s1));
+    const float det = dot(e1, s1);
+    const float  invd = 1.0/det;
     const vec3 d = ray.origin.xyz - v1;
     const float  b1 = dot(d, s1) * invd;
     const vec3 s2 = cross(d, e1);
     const float  b2 = dot(ray.direction.xyz, s2) * invd;
     const float temp = dot(e2, s2) * invd;
 
-    if ( b1 < 0.f || b1 > 1.f || b2 < 0.f || b1 + b2 > 1.f || temp < 0.0 ){
-        return false;
+    vec3 position = (ray.origin + (ray.direction * temp)).xyz;
+
+    vec3 normal = cross(e2, e1);
+
+    if ( b1 < 0.0 || b1 > 1.0 || b2 < 0.0 || (b1 + b2) > 1.0 || temp <= 0.0 || det < -EPSILON ){
+        return Intersection(vec4(position, 1.0), vec4(normal, 1.0), e2, -1.0);
     } else {
-        return true;
+        return Intersection(vec4(position, 1.0), vec4(normal, 1.0), e2, temp);
     }
 }
 
@@ -70,21 +73,21 @@ bool IntersectBox(Ray ray, Aabb box){
 
 void main(){
 
-    Light l = Light(vec3(0.0, 6.0, 3.0), 0.5);
-
     uvec2 current = gl_GlobalInvocationID.xy;
 
     Ray ray = rays[current.x][current.y];
 
-    //BoundingBox bbox = BoundingBox(vec4(-1.1, -1.1, -1.1, 0.0), vec4(1.1, 1.1, 1.1, 0.0));
-
     vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
-    for (uint k = 0; k < aabbs.length(); k++){
+    Intersection intersection;
 
-        Aabb aabb = aabbs[k];
+    bool hit = false;
 
-        if (IntersectBox(ray, aabb) ==  true) {
+    //for (uint k = 0; k < aabbs.length(); k++){
+
+        //Aabb aabb = aabbs[k];
+
+        //if (IntersectBox(ray, aabb) ==  true) {
 
             for (uint j = 0; j < tris.length(); j=j+3){
 
@@ -92,23 +95,26 @@ void main(){
                 vec3 v1 = tris[j+1].xyz;
                 vec3 v2 = tris[j+2].xyz;
 
-                bool a = intersectTriangle(ray, v0, v1, v2);
+                intersection  = intersectTriangle(ray, v0, v1, v2);
 
-                if (a == true){
-                    to_write = vec4(0.0, 1.0, 0.0, 1.0);
-                    intersections[current.x][current.y] = Intersection(to_write);
+                if (intersection.a != -1.0) {
+                    //hit = true;
                     break;
                 }
-                else {
-                    intersections[current.x][current.y] = Intersection(to_write);
-                }
-            }
-            break;
 
-        } else {
-            intersections[current.x][current.y] = Intersection(to_write);
-        }
-    }
+            }
+
+        //}
+    //}
+
+    intersections[current.x][current.y] = intersection;
+
+//    if (hit == false) {
+//        intersections[current.x][current.y] = intersection;
+//    } else {
+//        intersections[current.x][current.y] = intersection;
+//    }
+
 
 
 }

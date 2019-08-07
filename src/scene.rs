@@ -1,24 +1,27 @@
 pub mod camera;
-pub mod static_mesh;
+pub mod mesh;
+pub mod light;
 
 use nalgebra_glm as glm;
 
 use crate::asset::{load_gltf, MeshData};
 use camera::Camera;
-use static_mesh::StaticMesh;
-use crate::scene::static_mesh::MeshInstance;
-
-pub struct Scene {
-    pub camera: Camera,
-    pub meshes: Vec<StaticMesh>,
-    pub mesh_instances: Vec<MeshInstance>,
-}
+use mesh::StaticMesh;
+use crate::scene::mesh::MeshInstance;
+use crate::scene::light::PointLight;
 
 #[derive(Debug)]
 pub struct MeshView {
     pub instance_id: u32,
     pub start: u32,
     pub length: u32,
+}
+
+pub struct Scene {
+    pub camera: Camera,
+    pub lights: Vec<PointLight>,
+    pub meshes: Vec<StaticMesh>,
+    pub mesh_instances: Vec<MeshInstance>,
 }
 
 impl Scene {
@@ -94,6 +97,69 @@ impl Scene {
             .collect()
     }
 
+    pub fn light_data(&self) -> Vec<f32> {
+        self.lights.iter()
+            .map(|light|{
+                light.data()
+            })
+            .flatten()
+            .collect()
+    }
+
+//    pub fn cornell_box() -> Self {
+//        let asset_folder = "assets";
+//        let gltf = load_gltf(asset_folder, "untitled.gltf")
+//            .expect("failed to load gltf");
+//
+//        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
+//
+//        let cube_mesh = StaticMesh {
+//            id: 0,
+//            indices: mesh_data.indices.clone(),
+//            vertices: mesh_data.vertices.clone(),
+//        };
+//
+//        let floor = MeshInstance {
+//            position: glm::vec3(0.0, 0.0, 0.0),
+//            scale: glm::vec3(10.0, 10.0, 0.5),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            mesh_id: cube_mesh.id,
+//        };
+//
+//        let left_wall = MeshInstance {
+//            position: glm::vec3(-1.0, 0.0, 0.0),
+//            scale: glm::vec3(10.0, 10.0, 0.5),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            mesh_id: cube_mesh.id,
+//        };
+//
+//        let right_wall = MeshInstance {
+//            position: glm::vec3(-1.0, 0.0, 0.0),
+//            scale: glm::vec3(10.0, 10.0, 0.5),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            mesh_id: cube_mesh.id,
+//        };
+//
+//        let cube2 = MeshInstance {
+//            position: glm::vec3(1.0, 0.0, 0.0),
+//            scale: glm::vec3(1.0, 1.0, 1.0),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            mesh_id: cube_mesh.id,
+//        };
+//
+//        let camera = Camera::new(
+//            glm::vec3(0.0, 2.0, 6.0),
+//            glm::vec3( 0.0, 0.0, 0.0)
+//        );
+//
+//        Scene {
+//            camera,
+//            meshes: vec![cube_mesh],
+//            mesh_instances: vec![cube1, cube2],
+//
+//        }
+//    }
+
     pub fn two_cubes() -> Self {
         let asset_folder = "assets";
         let gltf = load_gltf(asset_folder, "untitled.gltf")
@@ -111,7 +177,7 @@ impl Scene {
             position: glm::vec3(-1.0, 0.0, 0.0),
             scale: glm::vec3(1.0, 1.0, 1.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
-            mesh_id: cube_mesh.id,
+            mesh_id: cube_mesh.id.clone(),
         };
 
         let cube2 = MeshInstance {
@@ -126,51 +192,62 @@ impl Scene {
             glm::vec3( 0.0, 0.0, 0.0)
         );
 
+        let light = PointLight{
+            position: glm::vec4(3.0, 5.0, 0.0, 0.0),
+            intensity: 20.0,
+        };
+
         Scene {
             camera,
+            lights: vec![light],
             meshes: vec![cube_mesh],
             mesh_instances: vec![cube1, cube2],
-
         }
     }
-
-    pub fn cube() -> Self {
-        let asset_folder = "assets";
-        let gltf = load_gltf(asset_folder, "untitled.gltf")
-            .expect("failed to load gltf");
-        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
-
-        let cube_mesh = StaticMesh {
-            id: 0,
-            indices: mesh_data.indices.clone(),
-            vertices: mesh_data.vertices.clone(),
-        };
-
-        let cube1 = MeshInstance {
-            position: glm::vec3(1.0, 0.0, 0.0),
-            scale: glm::vec3(1.0, 1.0, 1.0),
-            rotation: glm::vec3(0.0, 0.0, 1.0),
-            mesh_id: cube_mesh.id,
-        };
-
-        let camera = Camera::new(
-            glm::vec3(0.0, 2.0, 10.0),
-            glm::vec3( 0.0, 0.0, 0.0)
-        );
-
-        let scene = Scene {
-            camera,
-            meshes: vec![cube_mesh],
-            mesh_instances: vec![cube1],
-
-        };
-
-        println!("mesh instance views: {:?}", scene.instance_views());
-        println!("total indices: {:?}", scene.total_indices());
-
-        scene
-    }
 //
+//    pub fn cube() -> Self {
+//        let asset_folder = "assets";
+//        let gltf = load_gltf(asset_folder, "untitled.gltf")
+//            .expect("failed to load gltf");
+//        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
+//
+//        let cube_mesh = StaticMesh {
+//            id: 0,
+//            indices: mesh_data.indices.clone(),
+//            vertices: mesh_data.vertices.clone(),
+//        };
+//
+//        let cube1 = MeshInstance {
+//            position: glm::vec3(1.0, 0.0, 0.0),
+//            scale: glm::vec3(1.0, 1.0, 1.0),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            mesh_id: cube_mesh.id,
+//        };
+//
+//        let camera = Camera::new(
+//            glm::vec3(0.0, 2.0, 10.0),
+//            glm::vec3( 0.0, 0.0, 0.0)
+//        );
+//
+//        let light = PointLight{
+//            position: glm::vec3(0.0, 5.0, 3.0),
+//            intensity: 20.0,
+//        };
+//
+//        let scene = Scene {
+//            camera,
+//            lights: vec![light],
+//            meshes: vec![cube_mesh],
+//            mesh_instances: vec![cube1],
+//
+//        };
+//
+//        println!("mesh instance views: {:?}", scene.instance_views());
+//        println!("total indices: {:?}", scene.total_indices());
+//
+//        scene
+//    }
+
 //    pub fn cat() -> Self {
 //        let asset_folder = "assets";
 //        let gltf = load_gltf(asset_folder, "cat.gltf").expect("failed to load gltf");
