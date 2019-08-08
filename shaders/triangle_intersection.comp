@@ -80,14 +80,15 @@ void main(){
     vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
     Intersection intersection;
+    intersection.a = -1.0;
 
     bool hit = false;
 
-    //for (uint k = 0; k < aabbs.length(); k++){
+    for (uint k = 0; k < aabbs.length(); k++){
 
-        //Aabb aabb = aabbs[k];
+        Aabb aabb = aabbs[k];
 
-        //if (IntersectBox(ray, aabb) ==  true) {
+        if (IntersectBox(ray, aabb) ==  true) {
 
             for (uint j = 0; j < tris.length(); j=j+3){
 
@@ -104,17 +105,11 @@ void main(){
 
             }
 
-        //}
-    //}
+
+
+        }
+    }
 
     intersections[current.x][current.y] = intersection;
-
-//    if (hit == false) {
-//        intersections[current.x][current.y] = intersection;
-//    } else {
-//        intersections[current.x][current.y] = intersection;
-//    }
-
-
 
 }
