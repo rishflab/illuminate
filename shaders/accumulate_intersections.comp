@@ -49,37 +49,19 @@ void main() {
         //float light_distance = distance(light.position, intersection.position);
 
         float shade = 0.0;
+        float diffuse = 0.0;
+        float ambient = 0.1;
 
-        vec3 P = cross(light_direction.xyz, intersection.edge.xyz);
+//        vec3 P = cross(light_direction.xyz, intersection.edge.xyz);
+//        float det = dot(intersection.edge.xyz, P);
 
-        float det = dot(intersection.edge.xyz, P);
+        diffuse =  (0.02 * 20 * max(-1.0 * dot(intersection.normal, light_direction), 0.0));
 
-        if (det < EPSILON ) {
-
-            shade =  (0.01 * 20 * 1/dot(light_direction, intersection.normal));
-
-            //shade = light_angle * 30.0 * (1 / (light_distance * light_distance));
-        }
+        shade = ambient + diffuse;
 
         to_write = vec4(shade, shade, shade, 1.0);
 
-        //to_write = vec4(light.position);
-
-//        if (light.position == vec4(0.0, 0.0, 1.0, 0.0)) {
-//            to_write = vec4(0.0, 1.0, 0.0, 1.0);
-//
-//        }
-
-//        if (view[0][0] == 1.0) {
-//            to_write = vec4(1.0, 0.0, 1.0, 1.0);
-//
-//        } else {
-//            to_write = vec4(0.0, 1.0, 0.0, 1.0);
-//        }
-
-
     }
-
 
     imageStore(img, ivec2(current.xy), to_write);
 

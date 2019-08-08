@@ -193,7 +193,7 @@ impl Scene {
         );
 
         let light = PointLight{
-            position: glm::vec4(3.0, 5.0, 0.0, 0.0),
+            position: glm::vec4(3.0, 5.0, 2.0, 0.0),
             intensity: 20.0,
         };
 
