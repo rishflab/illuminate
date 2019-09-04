@@ -2,7 +2,7 @@
 
 #define EPSILON 0.0001
 
-layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 struct Ray {
     vec4 origin;
@@ -22,7 +22,7 @@ struct Aabb {
 };
 
 layout(std430, binding = 0) buffer restrict readonly Rays {
-    Ray rays[800][800];
+    Ray rays[];
 };
 
 layout(binding = 1) buffer restrict readonly Triangles {
@@ -30,7 +30,7 @@ layout(binding = 1) buffer restrict readonly Triangles {
 };
 
 layout(std430, binding = 2) buffer restrict writeonly Intersections {
-    Intersection intersections[800][800];
+    Intersection intersections[];
 };
 
 layout(std430, binding = 3) buffer restrict readonly BoundingBox {
@@ -60,6 +60,7 @@ Intersection intersectTriangle(Ray ray, vec3 v1, vec3 v2, vec3 v3){
     }
 }
 
+
 bool IntersectBox(Ray ray, Aabb box){
 
     vec4 tMin = (box.min - ray.origin) / ray.direction;
@@ -73,9 +74,9 @@ bool IntersectBox(Ray ray, Aabb box){
 
 void main(){
 
-    uvec2 current = gl_GlobalInvocationID.xy;
+    uint thread = gl_GlobalInvocationID.x;
 
-    Ray ray = rays[current.x][current.y];
+    Ray ray = rays[thread];
 
     vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
@@ -99,17 +100,14 @@ void main(){
                 intersection  = intersectTriangle(ray, v0, v1, v2);
 
                 if (intersection.a != -1.0) {
-                    //hit = true;
                     break;
                 }
 
             }
 
-
-
         }
     }
 
-    intersections[current.x][current.y] = intersection;
+    intersections[thread] = intersection;
 
 }

@@ -11,6 +11,8 @@ fn main() {
 
     let mut scene = Scene::two_cubes();
 
+    //let mut scene = Scene::cornell_box();
+
     let mut window = WindowState::new();
     let mut input = InputState::new();
     let (backend, _instance) = create_backend(&mut window, &mut input);

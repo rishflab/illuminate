@@ -56,7 +56,8 @@ impl<B: Backend> Accumulator<B> {
 
 
     pub unsafe fn write_desc_set(&self, device_state: Rc<RefCell<DeviceState<B>>>,
-                                 intersection_buffer: &B::Buffer, light_buffer: &B::Buffer){
+                                 intersection_buffer: &B::Buffer, light_buffer: &B::Buffer,
+                                 view_buffer: &B::Buffer){
 
         device_state
             .borrow()
@@ -73,6 +74,12 @@ impl<B: Backend> Accumulator<B> {
                     binding: 1,
                     array_offset: 0,
                     descriptors: Some(pso::Descriptor::Buffer(intersection_buffer, None..None)),
+                },
+                pso::DescriptorSetWrite {
+                    set: &self.desc_set,
+                    binding: 2,
+                    array_offset: 0,
+                    descriptors: Some(pso::Descriptor::Buffer(view_buffer, None..None)),
                 },
             ]);
 
@@ -111,6 +118,13 @@ impl<B: Backend> Accumulator<B> {
                     stage_flags: pso::ShaderStageFlags::COMPUTE,
                     immutable_samplers: false,
                 },
+                pso::DescriptorSetLayoutBinding {
+                    binding: 2,
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: 1,
+                    stage_flags: pso::ShaderStageFlags::COMPUTE,
+                    immutable_samplers: false,
+                },
             ],
             &[],
         ).expect("Camera ray set layout creation failed");
@@ -129,11 +143,11 @@ impl<B: Backend> Accumulator<B> {
         ).expect("Camera ray set layout creation failed");
 
         let mut pool = device.create_descriptor_pool(
-            4,
+            5,
             &[
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageBuffer,
-                    count: 2,
+                    count: 3,
                 },
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageImage,

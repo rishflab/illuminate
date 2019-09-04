@@ -178,7 +178,6 @@ void main() {
 
             if (det < EPSILON ) {
 
-
                 shade = -1.0 * det * 15.0 * (1 / (light_distance * light_distance));
             }
 

@@ -106,18 +106,9 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE | memory::Properties::DEVICE_LOCAL,
             buffer::Usage::STORAGE | buffer::Usage::TRANSFER_DST | buffer::Usage::TRANSFER_SRC,
-            //&scene.camera.view_matrix().data,
             &scene.light_data(),
         );
 
-//        let light_buffer = BufferState::empty(
-//            Rc::clone(&device),
-//            &backend.adapter.memory_types,
-//            memory::Properties::CPU_VISIBLE ,
-//            buffer::Usage::STORAGE,
-//            1 as u64,
-//            1.0
-//        );
 
         let ray_buffer = BufferState::empty(
             Rc::clone(&device),
@@ -229,7 +220,8 @@ impl<B: Backend> Pathtracer<B> {
         accumulator.write_desc_set(
             Rc::clone(&device),
             intersection_buffer.get_buffer(),
-            light_buffer.get_buffer()
+            light_buffer.get_buffer(),
+            camera_buffer.get_buffer(),
         );
 
         accumulator.write_frame_desc_sets(
@@ -369,7 +361,7 @@ impl<B: Backend> Pathtracer<B> {
                 ),
                 &[]
             );
-            cmd_buffer.dispatch([DIMS.width/WORK_GROUP_SIZE, DIMS.height/WORK_GROUP_SIZE, 1]);
+            cmd_buffer.dispatch([(DIMS.width*DIMS.height)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), 1 , 1]);
 
 
             cmd_buffer.bind_compute_pipeline(&self.vertex_skinner.pipeline);
@@ -462,7 +454,7 @@ impl<B: Backend> Pathtracer<B> {
                 &[]
             );
 
-            cmd_buffer.dispatch([DIMS.width/WORK_GROUP_SIZE, DIMS.height/WORK_GROUP_SIZE, 1]);
+            cmd_buffer.dispatch([(DIMS.width*DIMS.height)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), 1 , 1]);
 
             let intersection_barrier = memory::Barrier::Buffer{
                 states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
@@ -488,7 +480,7 @@ impl<B: Backend> Pathtracer<B> {
                 &[]
             );
 
-            cmd_buffer.dispatch([DIMS.width/WORK_GROUP_SIZE, DIMS.height/WORK_GROUP_SIZE, 1]);
+            cmd_buffer.dispatch([(DIMS.width*DIMS.height)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), 1 , 1]);
 
 
             cmd_buffer.finish();
