@@ -11,24 +11,27 @@ layout(binding = 0) buffer restrict readonly Camera {
     mat4 view;
 };
 
+
 layout(std430,  binding = 1) buffer restrict writeonly Rays {
     Ray rays[];
+};
+
+layout(binding = 2) buffer Resolution {
+    uvec2 resolution;
 };
 
 
 void main() {
 
-    uvec2 resolution = uvec2(800, 800);
-
+    float aspect_ratio = float(resolution.x)/float(resolution.y);
 
     uint thread = gl_GlobalInvocationID.x;
 
-    uint quotient = thread/resolution.y;
+    uint quotient = thread/resolution.x;
 
-    uint remainder = uint(mod(thread, resolution.y));
+    uint remainder = uint(mod(thread, resolution.x));
 
     uvec2 current = uvec2(remainder, quotient);
-
 
     vec3 cam_origin = vec3(0.0, 0.0, 0.0);
 
@@ -36,7 +39,7 @@ void main() {
 
     vec2 norm_coords = raster_coord / vec2(resolution.x, resolution.y);
 
-    vec2 screen_coord = vec2(-1.0, 1.0) + (vec2(2.0, -2.0) * norm_coords);
+    vec2 screen_coord = vec2(aspect_ratio*-1.0, 1.0) + (vec2(aspect_ratio * 2.0, -2.0) * norm_coords);
 
     vec3 screen_ray_intersection = vec3(screen_coord, -1.0);
 

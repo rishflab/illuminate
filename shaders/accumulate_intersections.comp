@@ -27,19 +27,19 @@ layout(set = 1, std430, binding = 1) buffer Intersections {
     Intersection intersections[];
 };
 
-layout(set = 1, std430, binding = 2) buffer restrict readonly Camera {
-    mat4 view;
+layout(set = 1, binding = 2) buffer Resolution {
+    uvec2 resolution;
 };
 
 
+
 void main() {
-    uvec2 resolution = uvec2(800, 800);
 
     uint thread = gl_GlobalInvocationID.x;
 
-    uint quotient = thread/resolution.y;
+    uint quotient = thread/resolution.x;
 
-    uint remainder = uint(mod(thread, resolution.y));
+    uint remainder = uint(mod(thread, resolution.x));
 
     uvec2 current = uvec2(remainder, quotient);
 
@@ -47,7 +47,7 @@ void main() {
 
     Light light = lights[0];
 
-    vec4 to_write = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 to_write = vec4(0.0, 0.0, 1.0, 1.0);
 
     if (intersection.a != -1.0) {
 
@@ -58,9 +58,6 @@ void main() {
         float shade = 0.0;
         float diffuse = 0.0;
         float ambient = 0.0;
-
-//        vec3 P = cross(light_direction.xyz, intersection.edge.xyz);
-//        float det = dot(intersection.edge.xyz, P);
 
         diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
 

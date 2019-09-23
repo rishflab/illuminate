@@ -20,6 +20,7 @@ use self::aabb_calculator::AabbCalculator;
 
 use self::types::Ray;
 use self::types::Intersection;
+use self::types::Camera;
 use crate::window::DIMS;
 use crate::renderer::WORK_GROUP_SIZE;
 
@@ -48,6 +49,7 @@ pub struct Pathtracer<B: Backend> {
     pub aabb_buffer: BufferState<B>,
     pub model_buffer: BufferState<B>,
     pub light_buffer: BufferState<B>,
+    pub resolution_buffer: BufferState<B>,
 }
 
 impl<B: Backend> Pathtracer<B> {
@@ -91,6 +93,14 @@ impl<B: Backend> Pathtracer<B> {
             memory::Properties::CPU_VISIBLE,
             buffer::Usage::STORAGE,
             &scene.camera.view_matrix().data,
+        );
+
+        let resolution_buffer = BufferState::new(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            memory::Properties::CPU_VISIBLE,
+            buffer::Usage::STORAGE,
+            &glm::vec2(DIMS.width, DIMS.height).data,
         );
 
         let model_buffer = BufferState::new(
@@ -193,6 +203,7 @@ impl<B: Backend> Pathtracer<B> {
             Rc::clone(&device),
             camera_buffer.get_buffer(),
             ray_buffer.get_buffer(),
+            resolution_buffer.get_buffer(),
         );
 
         vertex_skinner.write_desc_set(
@@ -221,7 +232,7 @@ impl<B: Backend> Pathtracer<B> {
             Rc::clone(&device),
             intersection_buffer.get_buffer(),
             light_buffer.get_buffer(),
-            camera_buffer.get_buffer(),
+            resolution_buffer.get_buffer(),
         );
 
         accumulator.write_frame_desc_sets(
@@ -298,7 +309,8 @@ impl<B: Backend> Pathtracer<B> {
             aabb_calculator,
             aabb_buffer,
             model_buffer,
-            light_buffer
+            light_buffer,
+            resolution_buffer
         }
     }
 

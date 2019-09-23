@@ -57,7 +57,7 @@ impl<B: Backend> Accumulator<B> {
 
     pub unsafe fn write_desc_set(&self, device_state: Rc<RefCell<DeviceState<B>>>,
                                  intersection_buffer: &B::Buffer, light_buffer: &B::Buffer,
-                                 view_buffer: &B::Buffer){
+                                 resolution_buffer: &B::Buffer){
 
         device_state
             .borrow()
@@ -79,7 +79,7 @@ impl<B: Backend> Accumulator<B> {
                     set: &self.desc_set,
                     binding: 2,
                     array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(view_buffer, None..None)),
+                    descriptors: Some(pso::Descriptor::Buffer(resolution_buffer, None..None)),
                 },
             ]);
 

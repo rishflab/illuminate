@@ -7,7 +7,7 @@ pub struct Dims {
 }
 
 pub const DIMS: Dims = Dims {
-    width: 800,
+    width: 960,
     height: 800,
 };
 

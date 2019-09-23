@@ -28,3 +28,8 @@ pub struct MeshHandle {
     pub min: [u32; 4],
     pub max: [u32; 4],
 }
+
+pub struct Camera {
+    pub view: glm::Mat4,
+    pub resolution: [u32; 2],
+}

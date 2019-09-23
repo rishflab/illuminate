@@ -23,7 +23,8 @@ impl<B: Backend> CameraRayGenerator<B> {
 
 
     pub unsafe fn write_desc_set(&self, device_state: Rc<RefCell<DeviceState<B>>>,
-                                 camera_buffer: &B::Buffer, ray_buffer: &B::Buffer){
+                                 camera_buffer: &B::Buffer, ray_buffer: &B::Buffer,
+                                 resolution_buffer: &B::Buffer){
 
         device_state
             .borrow()
@@ -40,6 +41,12 @@ impl<B: Backend> CameraRayGenerator<B> {
                     binding: 1,
                     array_offset: 0,
                     descriptors: Some(pso::Descriptor::Buffer(ray_buffer, None..None)),
+                },
+                pso::DescriptorSetWrite {
+                    set: &self.desc_set,
+                    binding: 2,
+                    array_offset: 0,
+                    descriptors: Some(pso::Descriptor::Buffer(resolution_buffer, None..None)),
                 },
             ]);
 
@@ -78,14 +85,24 @@ impl<B: Backend> CameraRayGenerator<B> {
                     stage_flags: pso::ShaderStageFlags::COMPUTE,
                     immutable_samplers: false,
                 },
-
+                pso::DescriptorSetLayoutBinding {
+                    binding: 2,
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: 1,
+                    stage_flags: pso::ShaderStageFlags::COMPUTE,
+                    immutable_samplers: false,
+                },
             ],
             &[],
         ).expect("Camera ray set layout creation failed");;
 
         let mut pool = device.create_descriptor_pool(
-            2,
+            3,
             &[
+                pso::DescriptorRangeDesc {
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: 1,
+                },
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageBuffer,
                     count: 1,
