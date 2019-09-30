@@ -22,6 +22,7 @@ use self::types::Ray;
 use self::types::Intersection;
 use self::types::Camera;
 use crate::window::DIMS;
+use crate::renderer::RAY_SAMPLES;
 use crate::renderer::WORK_GROUP_SIZE;
 
 use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, memory, buffer, pool};
@@ -125,7 +126,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
             buffer::Usage::STORAGE,
-            (DIMS.width * DIMS.height) as u64,
+            (DIMS.width * DIMS.height * RAY_SAMPLES) as u64,
             Ray{
                 origin: [0.0, 0.0, 0.0, 0.0],
                 direction: [0.0, 0.0, 0.0, 0.0],
@@ -137,7 +138,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
              buffer::Usage::STORAGE,
-            (DIMS.width * DIMS.height) as u64,
+            (DIMS.width * DIMS.height * RAY_SAMPLES) as u64,
             Intersection{
                 position: [0.0, 0.0, 0.0, 0.0],
                 normal: [0.0, 0.0, 0.0, 0.0],
@@ -373,7 +374,7 @@ impl<B: Backend> Pathtracer<B> {
                 ),
                 &[]
             );
-            cmd_buffer.dispatch([(DIMS.width*DIMS.height)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), 1 , 1]);
+            cmd_buffer.dispatch([(DIMS.width*DIMS.height*RAY_SAMPLES)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), 1 , 1]);
 
 
             cmd_buffer.bind_compute_pipeline(&self.vertex_skinner.pipeline);
@@ -466,7 +467,7 @@ impl<B: Backend> Pathtracer<B> {
                 &[]
             );
 
-            cmd_buffer.dispatch([(DIMS.width*DIMS.height)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), 1 , 1]);
+            cmd_buffer.dispatch([(DIMS.width*DIMS.height*RAY_SAMPLES)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), 1 , 1]);
 
             let intersection_barrier = memory::Barrier::Buffer{
                 states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,

@@ -24,14 +24,12 @@ layout(set = 1, binding = 0) uniform Lights {
 };
 
 layout(set = 1, std430, binding = 1) buffer Intersections {
-    Intersection intersections[];
+    Intersection intersections[][8];
 };
 
 layout(set = 1, binding = 2) buffer Resolution {
     uvec2 resolution;
 };
-
-
 
 void main() {
 
@@ -43,29 +41,37 @@ void main() {
 
     uvec2 current = uvec2(remainder, quotient);
 
-    Intersection intersection = intersections[thread];
-
     Light light = lights[0];
 
-    vec4 to_write = vec4(0.0, 0.0, 1.0, 1.0);
+    vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
-    if (intersection.a != -1.0) {
+    vec4 sum = vec4(0.0, 0.0, 0.0, 0.0);;
 
-        vec4 light_direction = normalize(light.position - intersection.position);
+    for (uint i= 0; i < 8; i++){
 
-        float light_distance = distance(light.position, intersection.position);
+        Intersection intersection = intersections[thread][i];
 
-        float shade = 0.0;
-        float diffuse = 0.0;
-        float ambient = 0.0;
+        if (intersection.a != -1.0) {
 
-        diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
+            vec4 light_direction = normalize(light.position - intersection.position);
 
-        shade = ambient + diffuse;
+            float light_distance = distance(light.position, intersection.position);
 
-        to_write = vec4(shade, shade, shade, 1.0);
+            float shade = 0.0;
+            float diffuse = 0.0;
+            float ambient = 0.2;
+
+            diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
+
+            shade = ambient + diffuse;
+
+            sum += vec4(shade, shade, shade, 0.0);
+
+        }
 
     }
+
+    to_write = sum/8;
 
     imageStore(img, ivec2(current.xy), to_write);
 

@@ -13,7 +13,7 @@ layout(binding = 0) buffer restrict readonly Camera {
 
 
 layout(std430,  binding = 1) buffer restrict writeonly Rays {
-    Ray rays[];
+    Ray rays[][8];
 };
 
 layout(binding = 2) buffer Resolution {
@@ -26,6 +26,8 @@ void main() {
     float aspect_ratio = float(resolution.x)/float(resolution.y);
 
     uint thread = gl_GlobalInvocationID.x;
+
+    uint samp = gl_GlobalInvocationID.y;
 
     uint quotient = thread/resolution.x;
 
@@ -49,6 +51,6 @@ void main() {
 
     vec3 ray_direction = normalize(screen_ray_intersection - cam_origin);
 
-    rays[thread] =  Ray(cam_origin, ray_direction);
+    rays[thread][samp] =  Ray(cam_origin, ray_direction);
 
 }

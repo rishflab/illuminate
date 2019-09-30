@@ -22,7 +22,7 @@ struct Aabb {
 };
 
 layout(std430, binding = 0) buffer restrict readonly Rays {
-    Ray rays[];
+    Ray rays[][8];
 };
 
 layout(binding = 1) buffer restrict readonly Triangles {
@@ -30,7 +30,7 @@ layout(binding = 1) buffer restrict readonly Triangles {
 };
 
 layout(std430, binding = 2) buffer restrict writeonly Intersections {
-    Intersection intersections[];
+    Intersection intersections[][8];
 };
 
 layout(std430, binding = 3) buffer restrict readonly BoundingBox {
@@ -76,7 +76,9 @@ void main(){
 
     uint thread = gl_GlobalInvocationID.x;
 
-    Ray ray = rays[thread];
+    uint samp = gl_GlobalInvocationID.y;
+
+    Ray ray = rays[thread][samp];
 
     vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
@@ -108,6 +110,6 @@ void main(){
         }
     }
 
-    intersections[thread] = intersection;
+    intersections[thread][samp] = intersection;
 
 }
