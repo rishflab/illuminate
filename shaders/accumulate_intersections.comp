@@ -24,7 +24,7 @@ layout(set = 1, binding = 0) uniform Lights {
 };
 
 layout(set = 1, std430, binding = 1) buffer Intersections {
-    Intersection intersections[][8];
+    Intersection intersections[][16];
 };
 
 layout(set = 1, binding = 2) buffer Resolution {
@@ -45,9 +45,9 @@ void main() {
 
     vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
-    vec4 sum = vec4(0.0, 0.0, 0.0, 0.0);;
+    vec4 sum = vec4(0.0, 0.0, 0.0, 1.0);;
 
-    for (uint i= 0; i < 8; i++){
+    for (uint i= 0; i < 16; i++){
 
         Intersection intersection = intersections[thread][i];
 
@@ -59,7 +59,7 @@ void main() {
 
             float shade = 0.0;
             float diffuse = 0.0;
-            float ambient = 0.2;
+            float ambient = 0.0;
 
             diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
 
@@ -71,7 +71,7 @@ void main() {
 
     }
 
-    to_write = sum/8;
+    to_write = 0.5 * sum/16;
 
     imageStore(img, ivec2(current.xy), to_write);
 

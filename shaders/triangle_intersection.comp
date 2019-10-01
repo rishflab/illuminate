@@ -22,7 +22,7 @@ struct Aabb {
 };
 
 layout(std430, binding = 0) buffer restrict readonly Rays {
-    Ray rays[][8];
+    Ray rays[][16];
 };
 
 layout(binding = 1) buffer restrict readonly Triangles {
@@ -30,7 +30,7 @@ layout(binding = 1) buffer restrict readonly Triangles {
 };
 
 layout(std430, binding = 2) buffer restrict writeonly Intersections {
-    Intersection intersections[][8];
+    Intersection intersections[][16];
 };
 
 layout(std430, binding = 3) buffer restrict readonly BoundingBox {

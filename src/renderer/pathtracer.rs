@@ -374,7 +374,7 @@ impl<B: Backend> Pathtracer<B> {
                 ),
                 &[]
             );
-            cmd_buffer.dispatch([(DIMS.width*DIMS.height*RAY_SAMPLES)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), 1 , 1]);
+            cmd_buffer.dispatch([(DIMS.width*DIMS.height)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), RAY_SAMPLES, 1]);
 
 
             cmd_buffer.bind_compute_pipeline(&self.vertex_skinner.pipeline);
@@ -467,7 +467,7 @@ impl<B: Backend> Pathtracer<B> {
                 &[]
             );
 
-            cmd_buffer.dispatch([(DIMS.width*DIMS.height*RAY_SAMPLES)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), 1 , 1]);
+            cmd_buffer.dispatch([(DIMS.width*DIMS.height)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE), RAY_SAMPLES , 1]);
 
             let intersection_barrier = memory::Barrier::Buffer{
                 states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
