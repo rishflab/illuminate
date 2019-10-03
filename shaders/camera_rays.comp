@@ -12,8 +12,8 @@ layout(binding = 0) buffer restrict readonly Camera {
 };
 
 
-layout(std430,  binding = 1) buffer restrict writeonly Rays {
-    Ray rays[][16];
+layout(std430,  binding = 1) buffer Rays {
+    Ray rays[];
 };
 
 layout(binding = 2) buffer Resolution {
@@ -23,19 +23,23 @@ layout(binding = 2) buffer Resolution {
 
 void main() {
 
-    float aspect_ratio = float(resolution.x)/float(resolution.y);
+    //float aspect_ratio = float(resolution.x)/float(resolution.y);
 
-    uint thread = gl_GlobalInvocationID.x;
+    float aspect_ratio = 1.2;
 
-    uint sample_no = gl_GlobalInvocationID.y;
+    uint samples = 8;
 
-    uint quotient = thread/resolution.x;
+    uint sample_index = gl_GlobalInvocationID.y;
 
-    uint remainder = uint(mod(thread, resolution.x));
+    uint ray_index = (gl_GlobalInvocationID.x*samples) + sample_index;
 
-    uvec2 current = uvec2(remainder, quotient);
+    uint quotient = gl_GlobalInvocationID.x/resolution.x;
 
-    vec2[16] jitter_kernel = {
+    uint remainder = uint(mod(gl_GlobalInvocationID.x, resolution.x));
+
+    uvec2 pixel = uvec2(remainder, quotient);
+
+    const vec2[16] jitter_kernel = {
         vec2(0.22, 0.45),
         vec2(0.11, 0.44),
         vec2(0.25, 0.74),
@@ -54,11 +58,10 @@ void main() {
         vec2(0.45, 0.09),
     };
 
+
     vec3 cam_origin = vec3(0.0, 0.0, 0.0);
 
-    //vec2 raster_coord = vec2(float(current.x), float(current.y)) + vec2(0.5, 0.5);
-
-    vec2 raster_coord = vec2(float(current.x), float(current.y)) + jitter_kernel[sample_no];
+    vec2 raster_coord = vec2(float(pixel.x), float(pixel.y)) + jitter_kernel[sample_index];
 
     vec2 norm_coords = raster_coord / vec2(resolution.x, resolution.y);
 
@@ -72,6 +75,6 @@ void main() {
 
     vec3 ray_direction = normalize(screen_ray_intersection - cam_origin);
 
-    rays[thread][sample_no] =  Ray(cam_origin, ray_direction);
+    rays[ray_index] =  Ray(cam_origin, ray_direction);
 
 }
