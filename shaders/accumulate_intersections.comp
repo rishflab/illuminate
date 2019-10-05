@@ -37,9 +37,9 @@ void main() {
 
     uint samples = 8;
 
-    uint index = gl_GlobalInvocationID.x * samples;
+    uint index = gl_GlobalInvocationID.x*samples;
 
-    uint quotient = gl_GlobalInvocationID.x/(resolution.x);
+    uint quotient = gl_GlobalInvocationID.x/resolution.x;
 
     uint remainder = uint(mod(gl_GlobalInvocationID.x, resolution.x));
 
@@ -70,9 +70,7 @@ void main() {
             shade = ambient + diffuse;
 
             sum += vec4(shade, shade, shade, 0.0);
-
         }
-
     }
 
     to_write = 0.5 * sum/samples;

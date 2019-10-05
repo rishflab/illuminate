@@ -230,6 +230,51 @@ impl Scene {
             mesh_instances: vec![cube1, cube2],
         }
     }
+
+    pub fn occluded_cubes() -> Self {
+        let asset_folder = "assets";
+        let gltf = load_gltf(asset_folder, "untitled.gltf")
+            .expect("failed to load gltf");
+
+        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
+
+        let cube_mesh = StaticMesh {
+            id: 0,
+            indices: mesh_data.indices.clone(),
+            vertices: mesh_data.vertices.clone(),
+        };
+
+        let cube1 = MeshInstance {
+            position: glm::vec3(1.0, 0.0, -1.0),
+            scale: glm::vec3(1.0, 1.0, 1.0),
+            rotation: glm::vec3(0.0, 0.0, 1.0),
+            mesh_id: cube_mesh.id.clone(),
+        };
+
+        let cube2 = MeshInstance {
+            position: glm::vec3(1.0, 0.0, 0.5),
+            scale: glm::vec3(1.0, 1.0, 1.0),
+            rotation: glm::vec3(0.0, 0.0, 1.0),
+            mesh_id: cube_mesh.id,
+        };
+
+        let camera = Camera::new(
+            glm::vec3(0.0, 2.0, 8.0),
+            glm::vec3( 0.0, 0.0, 0.0)
+        );
+
+        let light = PointLight{
+            position: glm::vec4(3.0, 5.0, 2.0, 0.0),
+            intensity: 20.0,
+        };
+
+        Scene {
+            camera,
+            lights: vec![light],
+            meshes: vec![cube_mesh],
+            mesh_instances: vec![cube1, cube2],
+        }
+    }
 //
 //    pub fn cube() -> Self {
 //        let asset_folder = "assets";

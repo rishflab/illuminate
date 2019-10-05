@@ -9,7 +9,9 @@ use blackhole::scene::Scene;
 fn main() {
     env_logger::init();
 
-    let mut scene = Scene::two_cubes();
+    //let mut scene = Scene::two_cubes();
+
+    let mut scene = Scene::occluded_cubes();
 
     //let mut scene = Scene::cornell_box();
 

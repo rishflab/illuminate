@@ -72,6 +72,11 @@ bool IntersectBox(Ray ray, Aabb box){
     return (tFar >= tNear) ? true : false;
 }
 
+float DistanceFromOrigin(Ray ray, Intersection intersection) {
+    return distance(intersection.position, ray.origin);
+}
+
+
 void main(){
 
     uint thread = gl_GlobalInvocationID.x;
@@ -82,6 +87,8 @@ void main(){
 
     Intersection intersection;
     intersection.a = -1.0;
+
+    float closest_intersection = 10000000.0;
 
     bool hit = false;
 
@@ -97,10 +104,16 @@ void main(){
                 vec3 v1 = tris[j+1].xyz;
                 vec3 v2 = tris[j+2].xyz;
 
-                intersection  = intersectTriangle(ray, v0, v1, v2);
+                Intersection current_intersection = intersectTriangle(ray, v0, v1, v2);
 
-                if (intersection.a != -1.0) {
-                    break;
+                if (current_intersection.a != -1.0) {
+
+                    float current_distance = DistanceFromOrigin(ray, current_intersection);
+
+                    if (current_distance < closest_intersection){
+                        closest_intersection = current_distance;
+                        intersection = current_intersection;
+                    }
                 }
 
             }
