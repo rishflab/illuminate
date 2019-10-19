@@ -63,17 +63,17 @@ void main() {
 
             float shade = 0.0;
             float diffuse = 0.0;
-            float ambient = 0.0;
+            float ambient = 0.1;
 
             diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
 
-            shade = ambient + diffuse;
+            shade = ambient + 5.0*(1/(light_distance * light_distance))* diffuse;
 
             sum += vec4(shade, shade, shade, 0.0);
         }
     }
 
-    to_write = 0.5 * sum/samples;
+    to_write =  sum/samples;
 
     imageStore(img, ivec2(pixel.xy), to_write);
 

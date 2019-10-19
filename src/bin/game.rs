@@ -11,9 +11,9 @@ fn main() {
 
     //let mut scene = Scene::two_cubes();
 
-    let mut scene = Scene::occluded_cubes();
+    //let mut scene = Scene::occluded_cubes();
 
-    //let mut scene = Scene::cornell_box();
+    let mut scene = Scene::multiple_boxes();
 
     let mut window = WindowState::new();
     let mut input = InputState::new();

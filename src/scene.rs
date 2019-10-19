@@ -106,7 +106,7 @@ impl Scene {
             .collect()
     }
 
-    pub fn cornell_box() -> Self {
+    pub fn multiple_boxes() -> Self {
         let asset_folder = "assets";
         let gltf = load_gltf(asset_folder, "untitled.gltf")
             .expect("failed to load gltf");
@@ -121,53 +121,67 @@ impl Scene {
 
         let floor = MeshInstance {
             position: glm::vec3(0.0, 0.0, 0.0),
-            scale: glm::vec3(5.0, 1.0, 5.0),
+            scale: glm::vec3(10.0, 1.0, 10.0),
+            rotation: glm::vec3(0.0, 0.0, 1.0),
+            mesh_id: cube_mesh.id,
+        };
+
+        let ceiling = MeshInstance {
+            position: glm::vec3(0.0, 5.0, 0.0),
+            scale: glm::vec3(10.0, 1.0, 10.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
             mesh_id: cube_mesh.id,
         };
 
         let left_wall = MeshInstance {
-            position: glm::vec3(-3.5, 0.0, 0.0),
-            scale: glm::vec3(1.0, 5.0, 5.0),
+            position: glm::vec3(-3.0, 0.0, 0.0),
+            scale: glm::vec3(1.0, 10.0, 10.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
             mesh_id: cube_mesh.id,
         };
 
         let right_wall = MeshInstance {
-            position: glm::vec3(3.0, 0.0, 0.0),
-            scale: glm::vec3(1.0, 5.0, 5.0),
+            position: glm::vec3(5.0, 0.0, 0.0),
+            scale: glm::vec3(1.0, 10.0, 10.0),
+            rotation: glm::vec3(0.0, 0.0, 1.0),
+            mesh_id: cube_mesh.id,
+        };
+
+        let back_wall = MeshInstance {
+            position: glm::vec3(0.0, 0.0, -5.0),
+            scale: glm::vec3(10.0, 10.0, 1.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
             mesh_id: cube_mesh.id,
         };
 
         let cube1 = MeshInstance {
-            position: glm::vec3(-1.0, 0.0, 0.0),
+            position: glm::vec3(-1.0, 1.0, 0.0),
             scale: glm::vec3(1.0, 1.0, 1.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
             mesh_id: cube_mesh.id.clone(),
         };
 
         let cube2 = MeshInstance {
-            position: glm::vec3(1.0, 0.0, 0.0),
+            position: glm::vec3(1.0, 1.0, 0.0),
             scale: glm::vec3(1.0, 1.0, 1.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
             mesh_id: cube_mesh.id,
         };
 
         let cube3 = MeshInstance {
-            position: glm::vec3(0.0, 0.0, 1.0),
-            scale: glm::vec3(1.0, 1.5, 1.0),
+            position: glm::vec3(3.0, 1.0, 0.0),
+            scale: glm::vec3(1.0, 3.0, 3.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
             mesh_id: cube_mesh.id,
         };
 
         let camera = Camera::new(
-            glm::vec3(0.0, 2.0, 6.0),
-            glm::vec3( 0.0, 0.0, 0.0)
+            glm::vec3(0.0, 4.0, 8.0),
+            glm::vec3( 0.0, 2.0, -7.0)
         );
 
         let light = PointLight{
-            position: glm::vec4(4.5, 10.0, 2.0, 0.0),
+            position: glm::vec4(1.5, 4.0, 4.0, 0.0),
             intensity: 20.0,
         };
 
@@ -180,8 +194,10 @@ impl Scene {
                 cube2,
                 cube3,
                 floor,
+//                ceiling,
                 left_wall,
-                right_wall,
+//                right_wall,
+//                back_wall,
             ]
         }
     }

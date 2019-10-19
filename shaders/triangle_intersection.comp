@@ -51,7 +51,7 @@ Intersection intersectTriangle(Ray ray, vec3 v1, vec3 v2, vec3 v3){
 
     vec3 position = (ray.origin + (ray.direction * temp)).xyz;
 
-    vec3 normal = cross(e2, e1);
+    vec3 normal = normalize(cross(e2, e1));
 
     if ( b1 < 0.0 || b1 > 1.0 || b2 < 0.0 || (b1 + b2) > 1.0 || temp <= 0.0 || det < -EPSILON ){
         return Intersection(vec4(position, 1.0), vec4(normal, 1.0), e2, -1.0);
