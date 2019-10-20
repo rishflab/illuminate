@@ -27,7 +27,7 @@ void main() {
 
     float aspect_ratio = 1.2;
 
-    uint samples = 8;
+    uint samples = 4;
 
     uint sample_index = gl_GlobalInvocationID.y;
 

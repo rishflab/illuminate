@@ -21,20 +21,28 @@ struct Aabb {
     vec4 max;
 };
 
-layout(std430, binding = 0) buffer restrict readonly Rays {
-    Ray rays[];
-};
-
-layout(binding = 1) buffer restrict readonly Triangles {
+layout(binding = 0) buffer restrict readonly Triangles {
     vec4 tris[];
 };
 
-layout(std430, binding = 2) buffer restrict writeonly Intersections {
-    Intersection intersections[];
+layout(std430, binding = 1) buffer restrict readonly BoundingBox {
+    Aabb aabbs[];
 };
 
-layout(std430, binding = 3) buffer restrict readonly BoundingBox {
-    Aabb aabbs[];
+layout(std430, binding = 2) buffer restrict readonly P_Rays {
+    Ray p_rays[];
+};
+
+layout(std430, binding = 3) buffer restrict writeonly P_Intersections {
+    Intersection p_intersections[];
+};
+
+layout(std430, binding = 4) buffer restrict B_Rays {
+    Ray b_rays[];
+};
+
+layout(std430, binding = 5) buffer restrict writeonly B_Intersections {
+    Intersection b_intersections[];
 };
 
 
@@ -82,7 +90,7 @@ void main(){
 
     uint thread = gl_GlobalInvocationID.x;
 
-    Ray ray = rays[thread];
+    Ray ray = p_rays[thread];
 
     vec4 to_write = vec4(0.0, 0.0, 0.0, 0.0);
 
@@ -116,12 +124,51 @@ void main(){
                         intersection = current_intersection;
                     }
                 }
+            }
+        }
+    }
+
+    p_intersections[thread] = intersection;
+
+    vec4 reflection = reflect(ray.direction, intersection.normal);
+    Ray bounce = Ray(intersection.position, reflection);
+
+    b_rays[thread] = bounce;
+
+    Intersection b_intersection;
+    b_intersection.a = -1.0;
+
+    hit = false;
+
+    for (uint k = 0; k < aabbs.length(); k++){
+
+        Aabb aabb = aabbs[k];
+
+        if (IntersectBox(bounce, aabb) ==  true) {
+
+            for (uint j = 0; j < tris.length(); j=j+3){
+
+                vec3 v0 = tris[j].xyz;
+                vec3 v1 = tris[j+1].xyz;
+                vec3 v2 = tris[j+2].xyz;
+
+                Intersection current_intersection = intersectTriangle(bounce, v0, v1, v2);
+
+                if (current_intersection.a != -1.0) {
+
+                    float current_distance = DistanceFromOrigin(bounce, current_intersection);
+
+                    if (current_distance < closest_intersection){
+                        closest_intersection = current_distance;
+                        b_intersection = current_intersection;
+                    }
+                }
 
             }
 
         }
     }
 
-    intersections[thread] = intersection;
+    b_intersections[thread] = b_intersection;
 
 }

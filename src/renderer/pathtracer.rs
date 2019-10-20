@@ -42,11 +42,13 @@ pub struct Pathtracer<B: Backend> {
     pub aabb_calculator: AabbCalculator<B>,
     pub accumulator: Accumulator<B>,
     pub camera_buffer: BufferState<B>,
-    pub ray_buffer: BufferState<B>,
     pub vertex_buffer: BufferState<B>,
     pub triangle_buffer: BufferState<B>,
     pub index_buffer: BufferState<B>,
-    pub intersection_buffer: BufferState<B>,
+    pub primary_ray_buffer: BufferState<B>,
+    pub primary_intersection_buffer: BufferState<B>,
+    pub bounce_ray_buffer: BufferState<B>,
+    pub bounce_intersection_buffer: BufferState<B>,
     pub aabb_buffer: BufferState<B>,
     pub model_buffer: BufferState<B>,
     pub light_buffer: BufferState<B>,
@@ -121,7 +123,7 @@ impl<B: Backend> Pathtracer<B> {
         );
 
 
-        let ray_buffer = BufferState::empty(
+        let primary_ray_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
@@ -133,11 +135,37 @@ impl<B: Backend> Pathtracer<B> {
             }
         );
 
-        let intersection_buffer = BufferState::empty(
+        let primary_intersection_buffer = BufferState::empty(
             Rc::clone(&device),
             &backend.adapter.memory_types,
             memory::Properties::DEVICE_LOCAL,
              buffer::Usage::STORAGE,
+            (DIMS.width * DIMS.height * RAY_SAMPLES) as u64,
+            Intersection{
+                position: [0.0, 0.0, 0.0, 0.0],
+                normal: [0.0, 0.0, 0.0, 0.0],
+                edge: [0.0, 0.0, 0.0, 0.0],
+                float: 0.0
+            }
+        );
+
+        let bounce_ray_buffer = BufferState::empty(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            memory::Properties::DEVICE_LOCAL,
+            buffer::Usage::STORAGE,
+            (DIMS.width * DIMS.height * RAY_SAMPLES) as u64,
+            Ray{
+                origin: [0.0, 0.0, 0.0, 0.0],
+                direction: [0.0, 0.0, 0.0, 0.0],
+            }
+        );
+
+        let bounce_intersection_buffer = BufferState::empty(
+            Rc::clone(&device),
+            &backend.adapter.memory_types,
+            memory::Properties::DEVICE_LOCAL,
+            buffer::Usage::STORAGE,
             (DIMS.width * DIMS.height * RAY_SAMPLES) as u64,
             Intersection{
                 position: [0.0, 0.0, 0.0, 0.0],
@@ -203,7 +231,7 @@ impl<B: Backend> Pathtracer<B> {
         camera_ray_generator.write_desc_set(
             Rc::clone(&device),
             camera_buffer.get_buffer(),
-            ray_buffer.get_buffer(),
+            primary_ray_buffer.get_buffer(),
             resolution_buffer.get_buffer(),
         );
 
@@ -223,17 +251,20 @@ impl<B: Backend> Pathtracer<B> {
 
         ray_triangle_intersector.write_desc_set(
             Rc::clone(&device),
-            ray_buffer.get_buffer(),
             triangle_buffer.get_buffer(),
-            intersection_buffer.get_buffer(),
             aabb_buffer.get_buffer(),
+            primary_ray_buffer.get_buffer(),
+            primary_intersection_buffer.get_buffer(),
+            bounce_ray_buffer.get_buffer(),
+            bounce_intersection_buffer.get_buffer(),
         );
 
         accumulator.write_desc_set(
             Rc::clone(&device),
-            intersection_buffer.get_buffer(),
             light_buffer.get_buffer(),
             resolution_buffer.get_buffer(),
+            primary_intersection_buffer.get_buffer(),
+            bounce_intersection_buffer.get_buffer(),
         );
 
         accumulator.write_frame_desc_sets(
@@ -302,11 +333,13 @@ impl<B: Backend> Pathtracer<B> {
             accumulator,
             vertex_skinner,
             camera_buffer,
-            ray_buffer,
             index_buffer,
             vertex_buffer,
             triangle_buffer,
-            intersection_buffer,
+            primary_ray_buffer,
+            primary_intersection_buffer,
+            bounce_ray_buffer,
+            bounce_intersection_buffer,
             aabb_calculator,
             aabb_buffer,
             model_buffer,
@@ -413,7 +446,7 @@ impl<B: Backend> Pathtracer<B> {
 
             let ray_barrier = memory::Barrier::Buffer{
                 states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
-                target: self.ray_buffer.get_buffer(),
+                target: self.primary_ray_buffer.get_buffer(),
                 families: None,
                 range: None..None
             };
@@ -471,7 +504,7 @@ impl<B: Backend> Pathtracer<B> {
 
             let intersection_barrier = memory::Barrier::Buffer{
                 states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
-                target: self.intersection_buffer.get_buffer(),
+                target: self.primary_intersection_buffer.get_buffer(),
                 families: None,
                 range: None..None
             };

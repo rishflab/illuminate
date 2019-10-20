@@ -23,19 +23,23 @@ layout(set = 1, binding = 0) uniform Lights {
     Light lights[];
 };
 
-layout(set = 1, std430, binding = 1) buffer Intersections {
-    Intersection intersections[];
+layout(set = 1, binding = 1) buffer Resolution {
+    uvec2 resolution;
 };
 
-layout(set = 1, binding = 2) buffer Resolution {
-    uvec2 resolution;
+layout(set = 1, std430, binding = 2) buffer P_Intersections {
+    Intersection p_intersections[];
+};
+
+layout(set = 1, std430, binding = 3) buffer B_Intersections {
+    Intersection b_intersections[];
 };
 
 void main() {
 
     float aspect_ratio = 1.2;
 
-    uint samples = 8;
+    uint samples = 4;
 
     uint index = gl_GlobalInvocationID.x*samples;
 
@@ -53,7 +57,26 @@ void main() {
 
     for (uint i=index; i < index+samples; i++){
 
-        Intersection intersection = intersections[i];
+        Intersection b_intersection = b_intersections[i];
+
+        if (b_intersection.a != -1.0) {
+
+            vec4 light_direction = normalize(light.position - b_intersection.position);
+
+            float light_distance = distance(light.position, b_intersection.position);
+
+            float shade = 0.0;
+            float diffuse = 0.0;
+            //float ambient = 0.1;
+
+            diffuse = max(-1.0 * dot(b_intersection.normal, light_direction), 0.0);
+
+            shade = 1.0*(1/(light_distance * light_distance))* diffuse;
+
+            sum += vec4(shade, shade, shade, 0.0);
+        }
+
+        Intersection intersection = p_intersections[i];
 
         if (intersection.a != -1.0) {
 
