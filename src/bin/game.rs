@@ -37,8 +37,9 @@ fn main() {
                         running = false;
                     },
                     _ => {
-                        &scene.camera.update_position(command);
-                        println!("camera location: {:?}", scene.camera.position);
+                        &scene.lights[0].update_position(command);
+                        //&scene.camera.update_position(command);
+                        println!("camera location: {:?}", scene.lights[0].position);
                     },
                 }
             },

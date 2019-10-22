@@ -4,11 +4,21 @@
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
+struct ShadowRay {
+    vec4 origin;
+    vec4 end;
+};
+
 struct Intersection {
     vec4 position;
     vec4 normal;
     vec3 edge;
     float a;
+};
+
+struct Aabb {
+    vec4 min;
+    vec4 max;
 };
 
 struct Light {
@@ -35,10 +45,62 @@ layout(set = 1, std430, binding = 3) buffer B_Intersections {
     Intersection b_intersections[];
 };
 
+//layout(set = 1, binding = 4) buffer restrict readonly Triangles {
+//    vec4 tris[];
+//};
+//
+//layout(set = 2, std430, binding = 5) buffer restrict readonly BoundingBox {
+//    Aabb aabbs[];
+//};
+
+//
+//bool intersectTriangle(ShadowRay ray, vec3 direction, vec3 v1, vec3 v2, vec3 v3){
+//
+//    const vec3 e1 = v2 - v1;
+//    const vec3 e2 = v3 - v1;
+//    const vec3 s1 = cross(direction, e2);
+//    const float det = dot(e1, s1);
+//    const float  invd = 1.0/det;
+//    const vec3 d = ray.origin.xyz - v1;
+//    const float  b1 = dot(d, s1) * invd;
+//    const vec3 s2 = cross(d, e1);
+//    const float  b2 = dot(direction, s2) * invd;
+//    const float temp = dot(e2, s2) * invd;
+//
+//    vec3 position = (ray.origin.xyz + (direction * temp)).xyz;
+//
+//    float ray_length = distance(ray.end, ray.origin);
+//
+//    float intersection_distance = distance(ray.origin, position);
+//
+//    if (intersection_distance <= ray_length)
+//
+//
+//
+//    if ( b1 < 0.0 || b1 > 1.0 || b2 < 0.0 || (b1 + b2) > 1.0 || temp <= 0.0 || det < -EPSILON || intersection_distance >= ray_length ){
+//        //return Intersection(vec4(position, 1.0), vec4(normal, 1.0), e2, -1.0);
+//        return false;
+//    } else {
+//        //return Intersection(vec4(position, 1.0), vec4(normal, 1.0), e2, temp);
+//        return true;
+//    }
+//}
+//
+//
+//bool IntersectBox(Ray ray, Aabb box){
+//
+//    vec4 tMin = (box.min - ray.origin) / ray.direction;
+//    vec4 tMax = (box.max - ray.origin) / ray.direction;
+//    vec4 t1 = min(tMin, tMax);
+//    vec4 t2 = max(tMin, tMax);
+//    float tNear = max(max(t1.x, t1.y), t1.z);
+//    float tFar = min(min(t2.x, t2.y), t2.z);
+//    return (tFar >= tNear) ? true : false;
+//}
+
 void main() {
 
     float aspect_ratio = 1.2;
-
     uint samples = 4;
 
     uint index = gl_GlobalInvocationID.x*samples;
@@ -57,24 +119,11 @@ void main() {
 
     for (uint i=index; i < index+samples; i++){
 
-        Intersection b_intersection = b_intersections[i];
 
-        if (b_intersection.a != -1.0) {
+        vec4 bounce_value = vec4(0.0, 0.0, 0.0, 0.0);
+        float intersection_distance = 0.0;
+        vec4 primary_value = vec4(0.0, 0.0, 0.0, 0.0);
 
-            vec4 light_direction = normalize(light.position - b_intersection.position);
-
-            float light_distance = distance(light.position, b_intersection.position);
-
-            float shade = 0.0;
-            float diffuse = 0.0;
-            //float ambient = 0.1;
-
-            diffuse = max(-1.0 * dot(b_intersection.normal, light_direction), 0.0);
-
-            shade = 1.0*(1/(light_distance * light_distance))* diffuse;
-
-            sum += vec4(shade, shade, shade, 0.0);
-        }
 
         Intersection intersection = p_intersections[i];
 
@@ -84,16 +133,42 @@ void main() {
 
             float light_distance = distance(light.position, intersection.position);
 
-            float shade = 0.0;
-            float diffuse = 0.0;
-            float ambient = 0.1;
+            float diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
 
-            diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
+            float shade = 5.0 * (1/(1+(light_distance * light_distance)))* diffuse;
 
-            shade = ambient + 5.0*(1/(light_distance * light_distance))* diffuse;
+            primary_value = vec4(shade, shade, shade, 0.0);
 
-            sum += vec4(shade, shade, shade, 0.0);
+            sum +=  primary_value;
+
         }
+
+        Intersection b_intersection = b_intersections[i];
+
+        if (b_intersection.a != -1.0) {
+
+            vec4 light_direction = normalize(light.position - b_intersection.position);
+
+            float light_distance = distance(light.position, b_intersection.position);
+
+            float diffuse = max(-1.0 * dot(b_intersection.normal, light_direction), 0.0);
+
+            float shade = (1/(light_distance * light_distance))* diffuse;
+
+            bounce_value = vec4(shade, shade, shade, 0.0);
+
+            vec4 r_direction =  normalize(b_intersection.position - intersection.position);
+
+            float r_distance = distance(b_intersection.position, intersection.position);
+
+            float r_diffuse =  max(-1.0 * dot(intersection.normal, r_direction), 0.0);
+
+            float r_shade = 4.0 * (1/(1 + (r_distance * r_distance)))* r_diffuse;
+
+            sum += (bounce_value * r_shade);
+        }
+
+
     }
 
     to_write =  sum/samples;

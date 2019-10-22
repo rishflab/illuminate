@@ -40,9 +40,9 @@ void main() {
     uvec2 pixel = uvec2(remainder, quotient);
 
     const vec2[16] jitter_kernel = {
-        vec2(0.22, 0.45),
-        vec2(0.11, 0.44),
-        vec2(0.25, 0.74),
+        vec2(0.22, 0.35),
+        vec2(0.61, 0.94),
+        vec2(0.85, 0.14),
         vec2(0.53, 0.15),
         vec2(0.50, 0.65),
         vec2(0.85, 0.28),

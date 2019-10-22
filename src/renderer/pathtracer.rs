@@ -352,6 +352,7 @@ impl<B: Backend> Pathtracer<B> {
                   self, scene: &Scene) {
 
         self.camera_buffer.update_data(0, &scene.camera.view_matrix().data);
+        self.light_buffer.update_data(0, &scene.light_data());
 
         // Use guaranteed unused acquire semaphore to get the index of the next frame we will render to
         // by using acquire_image

@@ -162,7 +162,7 @@ impl Scene {
         };
 
         let cube2 = MeshInstance {
-            position: glm::vec3(1.0, 1.0, 0.0),
+            position: glm::vec3(1.0, 1.1, 0.0),
             scale: glm::vec3(1.0, 1.0, 1.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
             mesh_id: cube_mesh.id,
