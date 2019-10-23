@@ -4,9 +4,9 @@
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
-struct ShadowRay {
+struct Ray {
     vec4 origin;
-    vec4 end;
+    vec4 direction;
 };
 
 struct Intersection {
@@ -26,7 +26,7 @@ struct Light {
     float intensity;
 };
 
-layout(binding = 0, rgba8) uniform image2D img;
+layout(set = 0, binding = 0, rgba8) uniform image2D img;
 
 
 layout(set = 1, binding = 0) uniform Lights {
@@ -45,58 +45,77 @@ layout(set = 1, std430, binding = 3) buffer B_Intersections {
     Intersection b_intersections[];
 };
 
-//layout(set = 1, binding = 4) buffer restrict readonly Triangles {
-//    vec4 tris[];
-//};
-//
-//layout(set = 2, std430, binding = 5) buffer restrict readonly BoundingBox {
-//    Aabb aabbs[];
-//};
+layout(set = 1, binding = 4) buffer restrict readonly Triangles {
+    vec4 tris[];
+};
 
-//
-//bool intersectTriangle(ShadowRay ray, vec3 direction, vec3 v1, vec3 v2, vec3 v3){
-//
-//    const vec3 e1 = v2 - v1;
-//    const vec3 e2 = v3 - v1;
-//    const vec3 s1 = cross(direction, e2);
-//    const float det = dot(e1, s1);
-//    const float  invd = 1.0/det;
-//    const vec3 d = ray.origin.xyz - v1;
-//    const float  b1 = dot(d, s1) * invd;
-//    const vec3 s2 = cross(d, e1);
-//    const float  b2 = dot(direction, s2) * invd;
-//    const float temp = dot(e2, s2) * invd;
-//
-//    vec3 position = (ray.origin.xyz + (direction * temp)).xyz;
-//
-//    float ray_length = distance(ray.end, ray.origin);
-//
-//    float intersection_distance = distance(ray.origin, position);
-//
-//    if (intersection_distance <= ray_length)
-//
-//
-//
-//    if ( b1 < 0.0 || b1 > 1.0 || b2 < 0.0 || (b1 + b2) > 1.0 || temp <= 0.0 || det < -EPSILON || intersection_distance >= ray_length ){
-//        //return Intersection(vec4(position, 1.0), vec4(normal, 1.0), e2, -1.0);
-//        return false;
-//    } else {
-//        //return Intersection(vec4(position, 1.0), vec4(normal, 1.0), e2, temp);
-//        return true;
-//    }
-//}
-//
-//
-//bool IntersectBox(Ray ray, Aabb box){
-//
-//    vec4 tMin = (box.min - ray.origin) / ray.direction;
-//    vec4 tMax = (box.max - ray.origin) / ray.direction;
-//    vec4 t1 = min(tMin, tMax);
-//    vec4 t2 = max(tMin, tMax);
-//    float tNear = max(max(t1.x, t1.y), t1.z);
-//    float tFar = min(min(t2.x, t2.y), t2.z);
-//    return (tFar >= tNear) ? true : false;
-//}
+layout(set = 1, std430, binding = 5) buffer restrict readonly BoundingBox {
+    Aabb aabbs[];
+};
+
+
+bool intersectTriangle(Ray ray, vec3 ray_end, vec3 v1, vec3 v2, vec3 v3){
+
+    const vec3 e1 = v2 - v1;
+    const vec3 e2 = v3 - v1;
+    const vec3 s1 = cross(ray.direction.xyz, e2);
+    const float det = dot(e1, s1);
+    const float  invd = 1.0/det;
+    const vec3 d = ray.origin.xyz - v1;
+    const float  b1 = dot(d, s1) * invd;
+    const vec3 s2 = cross(d, e1);
+    const float  b2 = dot(ray.direction.xyz, s2) * invd;
+    const float temp = dot(e2, s2) * invd;
+
+    vec3 position = (ray.origin + (ray.direction * temp)).xyz;
+
+    float ray_length = distance(ray_end, ray.origin.xyz);
+
+    float intersection_distance = distance(ray.origin.xyz, position);
+
+    if ( b1 < 0.0 || b1 > 1.0 || b2 < 0.0 || (b1 + b2) > 1.0 || temp <= 0.0 || det < -EPSILON || intersection_distance > ray_length){
+        return false;
+    } else {
+        return true;
+    }
+}
+
+
+
+bool IntersectBox(Ray ray, Aabb box){
+
+    vec4 tMin = (box.min - ray.origin) / ray.direction;
+    vec4 tMax = (box.max - ray.origin) / ray.direction;
+    vec4 t1 = min(tMin, tMax);
+    vec4 t2 = max(tMin, tMax);
+    float tNear = max(max(t1.x, t1.y), t1.z);
+    float tFar = min(min(t2.x, t2.y), t2.z);
+    return (tFar >= tNear) ? true : false;
+}
+
+bool IsShadowed(Ray ray, Light light) {
+    
+    for (uint k = 0; k < aabbs.length(); k++){
+
+        Aabb aabb = aabbs[k];
+
+        if (IntersectBox(ray, aabb) ==  true) {
+
+            for (uint j = 0; j < tris.length(); j=j+3){
+
+                vec3 v0 = tris[j].xyz;
+                vec3 v1 = tris[j+1].xyz;
+                vec3 v2 = tris[j+2].xyz;
+
+                if (intersectTriangle(ray, light.position.xyz, v0, v1, v2)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
 
 void main() {
 
@@ -124,23 +143,29 @@ void main() {
         float intersection_distance = 0.0;
         vec4 primary_value = vec4(0.0, 0.0, 0.0, 0.0);
 
-
         Intersection intersection = p_intersections[i];
 
         if (intersection.a != -1.0) {
 
             vec4 light_direction = normalize(light.position - intersection.position);
 
-            float light_distance = distance(light.position, intersection.position);
+            Ray sray = Ray(intersection.position, light_direction);
 
-            float diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
+            if (IsShadowed(sray, light) == false){
 
-            float shade = 5.0 * (1/(1+(light_distance * light_distance)))* diffuse;
+                vec4 light_direction = normalize(light.position - intersection.position);
 
-            primary_value = vec4(shade, shade, shade, 0.0);
+                float light_distance = distance(light.position, intersection.position);
 
-            sum +=  primary_value;
+                float diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
 
+                float shade = 5.0 * (1/(1+(light_distance * light_distance)))* diffuse;
+
+                primary_value = vec4(shade, shade, shade, 0.0);
+
+                sum +=  primary_value;
+
+            }
         }
 
         Intersection b_intersection = b_intersections[i];
@@ -149,23 +174,30 @@ void main() {
 
             vec4 light_direction = normalize(light.position - b_intersection.position);
 
-            float light_distance = distance(light.position, b_intersection.position);
+            Ray sray = Ray(b_intersection.position, light.position);
 
-            float diffuse = max(-1.0 * dot(b_intersection.normal, light_direction), 0.0);
+            if (IsShadowed(sray, light) == false){
 
-            float shade = (1/(light_distance * light_distance))* diffuse;
+                vec4 light_direction = normalize(light.position - b_intersection.position);
 
-            bounce_value = vec4(shade, shade, shade, 0.0);
+                float light_distance = distance(light.position, b_intersection.position);
 
-            vec4 r_direction =  normalize(b_intersection.position - intersection.position);
+                float diffuse = max(-1.0 * dot(b_intersection.normal, light_direction), 0.0);
 
-            float r_distance = distance(b_intersection.position, intersection.position);
+                float shade = (1/(light_distance * light_distance))* diffuse;
 
-            float r_diffuse =  max(-1.0 * dot(intersection.normal, r_direction), 0.0);
+                bounce_value = vec4(shade, shade, shade, 0.0);
 
-            float r_shade = 4.0 * (1/(1 + (r_distance * r_distance)))* r_diffuse;
+                vec4 r_direction =  normalize(b_intersection.position - intersection.position);
 
-            sum += (bounce_value * r_shade);
+                float r_distance = distance(b_intersection.position, intersection.position);
+
+                float r_diffuse =  max(-1.0 * dot(intersection.normal, r_direction), 0.0);
+
+                float r_shade = 4.0 * (1/(1 + (r_distance * r_distance)))* r_diffuse;
+
+                sum += (bounce_value * r_shade);
+            }
         }
 
 

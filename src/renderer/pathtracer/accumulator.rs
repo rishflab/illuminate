@@ -59,7 +59,10 @@ impl<B: Backend> Accumulator<B> {
                                  light_buffer: &B::Buffer,
                                  resolution_buffer: &B::Buffer,
                                  primary_intersection_buffer: &B::Buffer,
-                                 bounce_intersection_buffer: &B::Buffer){
+                                 bounce_intersection_buffer: &B::Buffer,
+                                 triangle_buffer: &B::Buffer,
+                                 aabb_buffer: &B::Buffer,
+    ){
 
 
         device_state
@@ -89,6 +92,18 @@ impl<B: Backend> Accumulator<B> {
                     binding: 3,
                     array_offset: 0,
                     descriptors: Some(pso::Descriptor::Buffer(bounce_intersection_buffer, None..None)),
+                },
+                pso::DescriptorSetWrite {
+                    set: &self.desc_set,
+                    binding: 4,
+                    array_offset: 0,
+                    descriptors: Some(pso::Descriptor::Buffer(triangle_buffer, None..None)),
+                },
+                pso::DescriptorSetWrite {
+                    set: &self.desc_set,
+                    binding: 5,
+                    array_offset: 0,
+                    descriptors: Some(pso::Descriptor::Buffer(aabb_buffer, None..None)),
                 },
             ]);
 
@@ -141,6 +156,20 @@ impl<B: Backend> Accumulator<B> {
                     stage_flags: pso::ShaderStageFlags::COMPUTE,
                     immutable_samplers: false,
                 },
+                pso::DescriptorSetLayoutBinding {
+                    binding: 4,
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: 1,
+                    stage_flags: pso::ShaderStageFlags::COMPUTE,
+                    immutable_samplers: false,
+                },
+                pso::DescriptorSetLayoutBinding {
+                    binding: 5,
+                    ty: pso::DescriptorType::StorageBuffer,
+                    count: 1,
+                    stage_flags: pso::ShaderStageFlags::COMPUTE,
+                    immutable_samplers: false,
+                },
             ],
             &[],
         ).expect("Camera ray set layout creation failed");
@@ -159,11 +188,11 @@ impl<B: Backend> Accumulator<B> {
         ).expect("Camera ray set layout creation failed");
 
         let mut pool = device.create_descriptor_pool(
-            5,
+            8,
             &[
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageBuffer,
-                    count: 4,
+                    count: 6,
                 },
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageImage,
@@ -198,7 +227,7 @@ impl<B: Backend> Accumulator<B> {
                 shader_entry,
                 &layout,
             );
-            device.create_compute_pipeline(&pipeline_desc, None).expect("Could not create ray triangle intersector pipeline")
+            device.create_compute_pipeline(&pipeline_desc, None).expect("Could not create accumulator pipeline")
         };
 
         Accumulator {

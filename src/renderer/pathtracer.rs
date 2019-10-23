@@ -265,6 +265,8 @@ impl<B: Backend> Pathtracer<B> {
             resolution_buffer.get_buffer(),
             primary_intersection_buffer.get_buffer(),
             bounce_intersection_buffer.get_buffer(),
+            triangle_buffer.get_buffer(),
+            aabb_buffer.get_buffer(),
         );
 
         accumulator.write_frame_desc_sets(
