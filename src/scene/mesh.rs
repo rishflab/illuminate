@@ -1,7 +1,7 @@
 use nalgebra_glm as glm;
 use crate::input::Command;
 
-pub struct StaticMesh {
+pub struct StaticMeshData {
     pub id: usize,
     pub indices: Vec<u32>,
     pub vertices: Vec<glm::Vec4>,

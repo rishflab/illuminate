@@ -5,9 +5,8 @@ pub mod light;
 use nalgebra_glm as glm;
 
 use crate::asset::{load_gltf, MeshData};
-use camera::Camera;
-use mesh::StaticMesh;
-use crate::scene::mesh::MeshInstance;
+use crate::scene::camera::Camera;
+use crate::scene::mesh::{StaticMeshData, MeshInstance};
 use crate::scene::light::PointLight;
 
 #[derive(Debug)]
@@ -20,13 +19,13 @@ pub struct MeshView {
 pub struct Scene {
     pub camera: Camera,
     pub lights: Vec<PointLight>,
-    pub meshes: Vec<StaticMesh>,
+    pub mesh_data: Vec<StaticMeshData>,
     pub mesh_instances: Vec<MeshInstance>,
 }
 
 impl Scene {
     pub fn total_unique_vertices(&self) -> usize {
-        self.meshes.iter()
+        self.mesh_data.iter()
             .map(|mesh|{
                 mesh.vertices.len()
             })
@@ -34,7 +33,7 @@ impl Scene {
     }
 
     pub fn total_unique_indices(&self) -> usize {
-        self.meshes.iter()
+        self.mesh_data.iter()
             .map(|mesh|{
                 mesh.indices.len()
             })
@@ -44,13 +43,13 @@ impl Scene {
     pub fn total_indices(&self) -> usize {
         self.mesh_instances.iter()
             .map(|instance|{
-                self.meshes[instance.mesh_id].indices.len()
+                self.mesh_data[instance.mesh_id].indices.len()
             })
             .sum()
     }
 
     pub fn index_data(&self) -> Vec<u32> {
-        self.meshes.iter()
+        self.mesh_data.iter()
             .map(|mesh|{
                 mesh.indices.clone()
             })
@@ -60,7 +59,7 @@ impl Scene {
     }
 
     pub fn vertex_data(&self) -> Vec<f32> {
-        self.meshes.iter()
+        self.mesh_data.iter()
             .map(|mesh|{
                 mesh.vertices.clone()
             })
@@ -80,10 +79,10 @@ impl Scene {
             views.push(MeshView{
                 instance_id: id as u32,
                 start: start,
-                length: self.meshes[instance.mesh_id].indices.len() as u32
+                length: self.mesh_data[instance.mesh_id].indices.len() as u32
             });
             id += 1;
-            start += self.meshes[instance.mesh_id].indices.len() as u32;
+            start += self.mesh_data[instance.mesh_id].indices.len() as u32;
         }
         views
     }
@@ -113,7 +112,7 @@ impl Scene {
 
         let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
 
-        let cube_mesh = StaticMesh {
+        let cube_mesh = StaticMeshData {
             id: 0,
             indices: mesh_data.indices.clone(),
             vertices: mesh_data.vertices.clone(),
@@ -188,7 +187,7 @@ impl Scene {
         Scene {
             camera,
             lights: vec![light],
-            meshes: vec![cube_mesh],
+            mesh_data: vec![cube_mesh],
             mesh_instances: vec![
                 cube1,
                 cube2,
@@ -201,96 +200,96 @@ impl Scene {
             ]
         }
     }
-
-    pub fn two_cubes() -> Self {
-        let asset_folder = "assets";
-        let gltf = load_gltf(asset_folder, "untitled.gltf")
-                .expect("failed to load gltf");
-
-        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
-
-        let cube_mesh = StaticMesh {
-            id: 0,
-            indices: mesh_data.indices.clone(),
-            vertices: mesh_data.vertices.clone(),
-        };
-
-        let cube1 = MeshInstance {
-            position: glm::vec3(-1.0, 0.0, 0.0),
-            scale: glm::vec3(1.0, 1.0, 1.0),
-            rotation: glm::vec3(0.0, 0.0, 1.0),
-            mesh_id: cube_mesh.id.clone(),
-        };
-
-        let cube2 = MeshInstance {
-            position: glm::vec3(1.0, 0.0, 0.0),
-            scale: glm::vec3(1.0, 1.0, 1.0),
-            rotation: glm::vec3(0.0, 0.0, 1.0),
-            mesh_id: cube_mesh.id,
-        };
-
-        let camera = Camera::new(
-            glm::vec3(0.0, 2.0, 8.0),
-            glm::vec3( 0.0, 0.0, 0.0)
-        );
-
-        let light = PointLight{
-            position: glm::vec4(3.0, 5.0, 2.0, 0.0),
-            intensity: 20.0,
-        };
-
-        Scene {
-            camera,
-            lights: vec![light],
-            meshes: vec![cube_mesh],
-            mesh_instances: vec![cube1, cube2],
-        }
-    }
-
-    pub fn occluded_cubes() -> Self {
-        let asset_folder = "assets";
-        let gltf = load_gltf(asset_folder, "untitled.gltf")
-            .expect("failed to load gltf");
-
-        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
-
-        let cube_mesh = StaticMesh {
-            id: 0,
-            indices: mesh_data.indices.clone(),
-            vertices: mesh_data.vertices.clone(),
-        };
-
-        let cube1 = MeshInstance {
-            position: glm::vec3(1.0, 0.0, -1.0),
-            scale: glm::vec3(1.0, 1.0, 1.0),
-            rotation: glm::vec3(0.0, 0.0, 1.0),
-            mesh_id: cube_mesh.id.clone(),
-        };
-
-        let cube2 = MeshInstance {
-            position: glm::vec3(1.0, 0.0, 0.5),
-            scale: glm::vec3(1.0, 1.0, 1.0),
-            rotation: glm::vec3(0.0, 0.0, 1.0),
-            mesh_id: cube_mesh.id,
-        };
-
-        let camera = Camera::new(
-            glm::vec3(0.0, 2.0, 8.0),
-            glm::vec3( 0.0, 0.0, 0.0)
-        );
-
-        let light = PointLight{
-            position: glm::vec4(3.0, 5.0, 2.0, 0.0),
-            intensity: 20.0,
-        };
-
-        Scene {
-            camera,
-            lights: vec![light],
-            meshes: vec![cube_mesh],
-            mesh_instances: vec![cube1, cube2],
-        }
-    }
+//
+//    pub fn two_cubes() -> Self {
+//        let asset_folder = "assets";
+//        let gltf = load_gltf(asset_folder, "untitled.gltf")
+//                .expect("failed to load gltf");
+//
+//        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
+//
+//        let cube_mesh = StaticMesh {
+//            id: 0,
+//            indices: mesh_data.indices.clone(),
+//            vertices: mesh_data.vertices.clone(),
+//        };
+//
+//        let cube1 = MeshInstance {
+//            position: glm::vec3(-1.0, 0.0, 0.0),
+//            scale: glm::vec3(1.0, 1.0, 1.0),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            mesh_id: cube_mesh.id.clone(),
+//        };
+//
+//        let cube2 = MeshInstance {
+//            position: glm::vec3(1.0, 0.0, 0.0),
+//            scale: glm::vec3(1.0, 1.0, 1.0),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            mesh_id: cube_mesh.id,
+//        };
+//
+//        let camera = Camera::new(
+//            glm::vec3(0.0, 2.0, 8.0),
+//            glm::vec3( 0.0, 0.0, 0.0)
+//        );
+//
+//        let light = PointLight{
+//            position: glm::vec4(3.0, 5.0, 2.0, 0.0),
+//            intensity: 20.0,
+//        };
+//
+//        Scene {
+//            camera,
+//            lights: vec![light],
+//            mesh_data: vec![cube_mesh],
+//            mesh_instances: vec![cube1, cube2],
+//        }
+//    }
+//
+//    pub fn occluded_cubes() -> Self {
+//        let asset_folder = "assets";
+//        let gltf = load_gltf(asset_folder, "untitled.gltf")
+//            .expect("failed to load gltf");
+//
+//        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
+//
+//        let cube_mesh = StaticMesh {
+//            id: 0,
+//            indices: mesh_data.indices.clone(),
+//            vertices: mesh_data.vertices.clone(),
+//        };
+//
+//        let cube1 = MeshInstance {
+//            position: glm::vec3(1.0, 0.0, -1.0),
+//            scale: glm::vec3(1.0, 1.0, 1.0),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            mesh_id: cube_mesh.id.clone(),
+//        };
+//
+//        let cube2 = MeshInstance {
+//            position: glm::vec3(1.0, 0.0, 0.5),
+//            scale: glm::vec3(1.0, 1.0, 1.0),
+//            rotation: glm::vec3(0.0, 0.0, 1.0),
+//            mesh_id: cube_mesh.id,
+//        };
+//
+//        let camera = Camera::new(
+//            glm::vec3(0.0, 2.0, 8.0),
+//            glm::vec3( 0.0, 0.0, 0.0)
+//        );
+//
+//        let light = PointLight{
+//            position: glm::vec4(3.0, 5.0, 2.0, 0.0),
+//            intensity: 20.0,
+//        };
+//
+//        Scene {
+//            camera,
+//            lights: vec![light],
+//            mesh_data: vec![cube_mesh],
+//            mesh_instances: vec![cube1, cube2],
+//        }
+//    }
 //
 //    pub fn cube() -> Self {
 //        let asset_folder = "assets";
@@ -360,4 +359,10 @@ impl Scene {
 //        }
 //    }
 
+}
+
+impl Default for Scene {
+    fn default() -> Self {
+        Scene::multiple_boxes()
+    }
 }

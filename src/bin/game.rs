@@ -25,7 +25,6 @@ fn main() {
 
     let mut running = true;
 
-
     while running {
 
         use std::time::Instant;

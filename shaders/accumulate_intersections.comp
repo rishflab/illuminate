@@ -94,7 +94,7 @@ bool IntersectBox(Ray ray, Aabb box){
 }
 
 bool IsShadowed(Ray ray, Light light) {
-    
+
     for (uint k = 0; k < aabbs.length(); k++){
 
         Aabb aabb = aabbs[k];

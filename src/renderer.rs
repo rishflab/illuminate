@@ -19,10 +19,8 @@ const COLOR_RANGE: image::SubresourceRange = image::SubresourceRange {
     layers: 0..1,
 };
 
-
-
-
 pub trait Renderer<B: Backend>{
     unsafe fn new(backend: BackendState<B>, window: WindowState, scene: &Scene) -> Self;
     fn render(&mut self, scene: &Scene);
 }
+

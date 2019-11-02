@@ -11,12 +11,13 @@ use crate::renderer::core::device::DeviceState;
 use crate::renderer::core::swapchain::SwapchainState;
 use crate::renderer::core::command::CommandState;
 use crate::renderer::core::buffer::BufferState;
-use crate::scene::{Scene, MeshView};
+use crate::scene::{Scene, MeshView, light::PointLight};
 use self::camera_ray_generator::CameraRayGenerator;
 use self::ray_triangle_intersector::RayTriangleIntersector;
 use self::accumulator::Accumulator;
 use self::vertex_skinner::VertexSkinner;
 use self::aabb_calculator::AabbCalculator;
+
 
 use self::types::Ray;
 use self::types::Intersection;
@@ -350,8 +351,7 @@ impl<B: Backend> Pathtracer<B> {
         }
     }
 
-    pub fn render(&mut
-                  self, scene: &Scene) {
+    pub fn render(&mut self, scene: &Scene) {
 
         self.camera_buffer.update_data(0, &scene.camera.view_matrix().data);
         self.light_buffer.update_data(0, &scene.light_data());
