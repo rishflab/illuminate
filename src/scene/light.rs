@@ -1,4 +1,4 @@
-use crate::input::Command;
+use crate::input::MoveCommand;
 
 pub struct PointLight {
     pub position: glm::Vec4,
@@ -12,14 +12,14 @@ impl PointLight {
         data
     }
 
-    pub fn update_position(&mut self, command: Command) {
+    pub fn update_position(&mut self, command: MoveCommand) {
 
         match command {
-            Command::MoveLeft => {
+            MoveCommand::MoveLeft => {
                 self.position = self.position + glm::vec4(-0.1, 0.0, 0.0, 0.0);
                 //self.look_at = self.look_at + glm::vec4(-0.1, 0.0, 0.0, 0.0);
             },
-            Command::MoveRight => {
+            MoveCommand::MoveRight => {
                 self.position = self.position + glm::vec4(0.1, 0.0, 0.0, 0.0);
                 //self.look_at = self.look_at + glm::vec4(0.1, 0.0, 0.0, 0.0);
             },

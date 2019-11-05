@@ -5,9 +5,19 @@ pub struct InputState {
 }
 
 pub enum Command {
+    MoveCmd(MoveCommand),
+    Close,
+}
+pub enum MoveCommand {
     MoveLeft,
     MoveRight,
-    Close,
+    None,
+}
+
+impl Default for MoveCommand {
+    fn default() -> Self{
+        MoveCommand::None
+    }
 }
 
 impl InputState{
@@ -44,7 +54,7 @@ impl InputState{
                             ..
                         },
                         ..
-                    } => next = Some(Command::MoveLeft),
+                    } => next = Some(Command::MoveCmd(MoveCommand::MoveLeft)),
                     winit::WindowEvent::KeyboardInput {
                         input:
                         winit::KeyboardInput {
@@ -52,7 +62,7 @@ impl InputState{
                             ..
                         },
                         ..
-                    } => next = Some(Command::MoveRight),
+                    } => next = Some(Command::MoveCmd(MoveCommand::MoveRight)),
                     _ => (),
                 }
             }

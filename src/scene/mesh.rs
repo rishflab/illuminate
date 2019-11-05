@@ -1,5 +1,5 @@
 use nalgebra_glm as glm;
-use crate::input::Command;
+use crate::input::MoveCommand;
 
 pub struct StaticMeshData {
     pub id: usize,
@@ -27,12 +27,12 @@ impl MeshInstance {
         translation * rotation * scale
     }
 
-    pub fn update_position(&mut self, command: Command) {
+    pub fn update_position(&mut self, command: MoveCommand) {
         match command {
-            Command::MoveLeft => {
+            MoveCommand::MoveLeft => {
                 self.position = self.position + glm::vec3(-0.1, 0.0, 0.0);
             },
-            Command::MoveRight => {
+            MoveCommand::MoveRight => {
                 self.position = self.position + glm::vec3(0.1, 0.0, 0.0);
             },
             _ => (),

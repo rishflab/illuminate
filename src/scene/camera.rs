@@ -1,4 +1,4 @@
-use crate::input::Command;
+use crate::input::MoveCommand;
 
 pub struct Camera {
     pub position: glm::Vec3,
@@ -15,14 +15,14 @@ impl Camera {
         }
     }
 
-    pub fn update_position(&mut self, command: Command) {
+    pub fn update_position(&mut self, command: MoveCommand) {
 
         match command {
-            Command::MoveLeft => {
+            MoveCommand::MoveLeft => {
                 self.position = self.position + glm::vec3(-0.1, 0.0, 0.0);
                 self.look_at = self.look_at + glm::vec3(-0.1, 0.0, 0.0);
             },
-            Command::MoveRight => {
+            MoveCommand::MoveRight => {
                 self.position = self.position + glm::vec3(0.1, 0.0, 0.0);
                 self.look_at = self.look_at + glm::vec3(0.1, 0.0, 0.0);
             },

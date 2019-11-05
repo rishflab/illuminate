@@ -3,7 +3,7 @@ extern crate blackhole;
 use blackhole::renderer::pathtracer::Pathtracer;
 use blackhole::window::WindowState;
 use blackhole::renderer::core::backend::{create_backend};
-use blackhole::input::{InputState, Command};
+use blackhole::input::{InputState, Command, MoveCommand};
 use blackhole::scene::{Scene};
 use specs::prelude::*;
 use blackhole::asset::{load_gltf, MeshData};
@@ -11,6 +11,13 @@ use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
 use blackhole::scene;
 use nalgebra_glm::{vec3, vec3_to_vec4};
 use nalgebra_glm as glm;
+use std::borrow::Borrow;
+
+struct Player;
+
+impl Component for Player {
+    type Storage = VecStorage<Self>;
+}
 
 struct StaticMesh(usize);
 
@@ -50,29 +57,6 @@ struct Camera{
 impl Component for Camera {
     type Storage = VecStorage<Self>;
 }
-
-//struct InitRenderer(Pathtracer<B::Backend>);
-
-//impl InitRenderer{
-//    unsafe fn new (scene: Scene) -> Self {
-//        RenderSys(Pathtracer::new(backend, window, &scene))
-//    }
-//}
-
-
-//impl<'a> System<'a> for InitRenderer {
-//
-//    type SystemData = (
-//        Read<'a, Scene>,
-//        Read<'a, Pathtracer>,
-//    );
-//
-//    fn run(&mut self, data: Self::SystemData){
-//
-//
-//    }
-//}
-
 struct SceneBuilder;
 
 impl<'a> System<'a> for SceneBuilder {
@@ -118,16 +102,38 @@ impl<'a> System<'a> for SceneBuilder {
         scene.camera = cameraz.pop().unwrap();
         scene.lights = lightz;
         scene.mesh_instances = mesh_instances;
+    }
+}
 
-//        let new = Scene::multiple_boxes();
-//
-//        scene.camera = new.camera;
-//        scene.lights = new.lights;
-//        scene.mesh_instances = new.mesh_instances;
-//        scene.mesh_data = new.mesh_data;
+struct PlayerMovement;
+
+impl<'a> System<'a> for PlayerMovement {
+    type SystemData = (
+        Read<'a, MoveCommand>,
+        ReadStorage<'a, Player>,
+        WriteStorage <'a, Transform>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (move_command, players, mut transforms) = data;
+        (&players, &mut transforms).join()
+            .for_each(|(_, transform)|{
+                match *move_command {
+                    MoveCommand::MoveLeft => {
+                         transform.position = transform.position + vec3(-0.1, 0.0, 0.0);
+                         //self.look_at = self.look_at + glm::vec3(-0.1, 0.0, 0.0);
+                     },
+                     MoveCommand::MoveRight => {
+                         transform.position = transform.position + vec3(0.1, 0.0, 0.0);
+                         //self.look_at = self.look_at + glm::vec3(0.1, 0.0, 0.0);
+                     },
+                     MoveCommand::None => (),
+                }
+            })
 
     }
 }
+
 
 
 fn main() {
@@ -141,7 +147,6 @@ fn main() {
     let mut input = InputState::new();
     let (backend, _instance) = create_backend(&mut window, &mut input);
 
-
     let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
 
     let cube_mesh = StaticMeshData {
@@ -150,84 +155,98 @@ fn main() {
         vertices: mesh_data.vertices.clone(),
     };
 
-    let scene = Scene::default();
 
 
     let mut world = World::new();
 
-    world.register::<PointLight>();
-
-    let mut dispatcher = DispatcherBuilder::new()
+    let mut init = DispatcherBuilder::new()
         .with(SceneBuilder, "scene_builder", &[])
         .build();
 
+    init.setup(&mut world);
+
+    let mut dispatcher = DispatcherBuilder::new()
+    .with(PlayerMovement, "player_movement", &[])
+    .with(SceneBuilder, "scene_builder", &[])
+    .build();
+
     dispatcher.setup(&mut world);
 
-    world.insert(scene);
+    world.insert(Scene::default());
+    world.insert(MoveCommand::default());
 
     let floor = world.create_entity()
         .with(StaticMesh(0))
-        .with(Transform{
+        .with(Transform {
             position: glm::vec3(0.0, 0.0, 0.0),
             scale: glm::vec3(10.0, 1.0, 10.0),
             rotation: glm::vec3(0.0, 0.0, 1.0),
         })
         .build();
 
-    let camera =  world.create_entity()
-        .with(Transform{
+    let player = world.create_entity()
+        .with(Transform {
             position: vec3(0.0, 4.0, 8.0),
             scale: vec3(0.0, 0.0, 0.0),
             rotation: vec3(0.0, 0.0, 0.0),
         })
-        .with(Camera{
-            look_at: vec3( 0.0, 2.0, -7.0)
+        .with(Camera {
+            look_at: vec3(0.0, 2.0, -7.0)
         })
+        .with(Player)
         .build();
+
 
     let light = world.create_entity()
         .with(PointLight(20.0))
-        .with(Transform{
-            position: vec3(1.5, 4.0, 4.0, ),
+        .with(Transform {
+            position: vec3(1.5, 4.0, 4.0),
             scale: vec3(0.0, 0.0, 0.0),
             rotation: vec3(0.0, 0.0, 0.0),
         })
         .build();
 
 
-    dispatcher.dispatch(&world);
+    init.dispatch(&world);
 
     let mut renderer = unsafe {
         Pathtracer::new(backend, window, &world.fetch::<Scene>())
     };
 
-
-
     let mut running = true;
 
     while running {
-
         use std::time::Instant;
 
+        {
+            let mut move_command = world.write_resource::<MoveCommand>();
+            *move_command = MoveCommand::None;
+        }
         match input.process_raw_input() {
             Some(command) => {
                 match command {
                     Command::Close => {
                         running = false;
                     },
-                    _ => {
+                    Command::MoveCmd(next_move) => {
+                        let mut move_command = world.write_resource::<MoveCommand>();
+                        *move_command = next_move
                     },
                 }
             },
             None => (),
         }
 
+        dispatcher.dispatch(&world);
+
+
         let start = Instant::now();
 
-        renderer.render(   &world.fetch::<Scene>());
+        renderer.render(&world.fetch::<Scene>());
 
         let duration = start.elapsed();
 
         println!("Frame time {:?}", duration);
     }
+
 }
