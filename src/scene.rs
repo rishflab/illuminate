@@ -6,8 +6,10 @@ use nalgebra_glm as glm;
 
 use crate::asset::{load_gltf, MeshData};
 use crate::scene::camera::Camera;
-use crate::scene::mesh::{StaticMeshData, MeshInstance};
+use crate::scene::mesh::{StaticMeshData};
 use crate::scene::light::PointLight;
+
+pub use mesh::MeshInstance;
 
 #[derive(Debug)]
 pub struct MeshView {

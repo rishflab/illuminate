@@ -17,11 +17,9 @@ impl PointLight {
         match command {
             MoveCommand::MoveLeft => {
                 self.position = self.position + glm::vec4(-0.1, 0.0, 0.0, 0.0);
-                //self.look_at = self.look_at + glm::vec4(-0.1, 0.0, 0.0, 0.0);
             },
             MoveCommand::MoveRight => {
                 self.position = self.position + glm::vec4(0.1, 0.0, 0.0, 0.0);
-                //self.look_at = self.look_at + glm::vec4(0.1, 0.0, 0.0, 0.0);
             },
             _ => (),
 

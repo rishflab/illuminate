@@ -9,131 +9,11 @@ use specs::prelude::*;
 use blackhole::asset::{load_gltf, MeshData};
 use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
 use blackhole::scene;
+use blackhole::components::*;
+use blackhole::systems::FpsMovement::PlayerMovement;
+use blackhole::systems::SceneBuilder::SceneBuilder;
 use nalgebra_glm::{vec3, vec3_to_vec4};
 use nalgebra_glm as glm;
-use std::borrow::Borrow;
-
-struct Player;
-
-impl Component for Player {
-    type Storage = VecStorage<Self>;
-}
-
-struct StaticMesh(usize);
-
-impl Component for StaticMesh {
-    type Storage = VecStorage<Self>;
-}
-
-struct PointLight(f32);
-
-impl Component for PointLight {
-    type Storage = VecStorage<Self>;
-}
-
-struct Transform{
-    position: glm::Vec3,
-    scale: glm::Vec3,
-    rotation: glm::Vec3,
-}
-impl Component for Transform {
-    type Storage = VecStorage<Self>;
-}
-
-impl Default for Transform {
-    fn default() -> Self {
-        Transform {
-            position: vec3(0.0, 0.0, 0.0),
-            scale: vec3(1.0, 1.0, 1.0),
-            rotation: vec3(0.0, 0.0, 0.0),
-        }
-    }
-}
-
-struct Camera{
-    look_at: glm::Vec3,
-}
-
-impl Component for Camera {
-    type Storage = VecStorage<Self>;
-}
-struct SceneBuilder;
-
-impl<'a> System<'a> for SceneBuilder {
-
-    type SystemData = (
-        ReadStorage<'a, StaticMesh>,
-        ReadStorage<'a, Transform>,
-        ReadStorage<'a, Camera>,
-        ReadStorage<'a, PointLight>,
-        Write<'a, Scene>,
-    );
-
-    fn run(&mut self, data: Self::SystemData){
-
-    let (meshes, transforms, cameras, lights, mut scene) = data;
-
-        let mesh_instances: Vec<MeshInstance> = (&meshes, &transforms).join()
-            .map(|(mesh, transform)|{
-                MeshInstance{
-                    position: transform.position,
-                    scale: transform.scale,
-                    rotation: transform.rotation,
-                    mesh_id: mesh.0
-                }
-            })
-            .collect();
-
-        let mut cameraz: Vec<scene::camera::Camera> = (&cameras, &transforms).join()
-            .map(|(camera, transform)|{
-                scene::camera::Camera::new(transform.position, camera.look_at)
-            })
-            .collect();
-
-        let mut lightz: Vec<scene::light::PointLight> = (&lights, &transforms).join()
-            .map(|(light, transform)|{
-                scene::light::PointLight{
-                    position: vec3_to_vec4(&transform.position),
-                    intensity: light.0
-                }
-            })
-            .collect();
-
-        scene.camera = cameraz.pop().unwrap();
-        scene.lights = lightz;
-        scene.mesh_instances = mesh_instances;
-    }
-}
-
-struct PlayerMovement;
-
-impl<'a> System<'a> for PlayerMovement {
-    type SystemData = (
-        Read<'a, MoveCommand>,
-        ReadStorage<'a, Player>,
-        WriteStorage <'a, Transform>,
-    );
-
-    fn run(&mut self, data: Self::SystemData) {
-        let (move_command, players, mut transforms) = data;
-        (&players, &mut transforms).join()
-            .for_each(|(_, transform)|{
-                match *move_command {
-                    MoveCommand::MoveLeft => {
-                         transform.position = transform.position + vec3(-0.1, 0.0, 0.0);
-                         //self.look_at = self.look_at + glm::vec3(-0.1, 0.0, 0.0);
-                     },
-                     MoveCommand::MoveRight => {
-                         transform.position = transform.position + vec3(0.1, 0.0, 0.0);
-                         //self.look_at = self.look_at + glm::vec3(0.1, 0.0, 0.0);
-                     },
-                     MoveCommand::None => (),
-                }
-            })
-
-    }
-}
-
 
 
 fn main() {
@@ -154,8 +34,6 @@ fn main() {
         indices: mesh_data.indices.clone(),
         vertices: mesh_data.vertices.clone(),
     };
-
-
 
     let mut world = World::new();
 
