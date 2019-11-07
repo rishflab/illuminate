@@ -39,9 +39,25 @@ impl Default for Transform {
     }
 }
 
-pub struct Camera{
-    pub look_at: glm::Vec3,
+pub struct Position(pub glm::Vec3);
+
+impl Component for Position {
+    type Storage = VecStorage<Self>;
 }
+
+pub struct Rotation(pub glm::Quat);
+
+impl Component for Rotation {
+    type Storage = VecStorage<Self>;
+}
+
+pub struct Scale(pub glm::Vec3);
+
+impl Component for Scale {
+    type Storage = VecStorage<Self>;
+}
+
+pub struct Camera;
 
 impl Component for Camera {
     type Storage = VecStorage<Self>;

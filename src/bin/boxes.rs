@@ -10,9 +10,8 @@ use blackhole::asset::{load_gltf, MeshData};
 use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
 use blackhole::scene;
 use blackhole::components::*;
-use blackhole::systems::FpsMovement::PlayerMovement;
-use blackhole::systems::SceneBuilder::SceneBuilder;
-use nalgebra_glm::{vec3, vec3_to_vec4};
+use blackhole::systems::scene_builder::SceneBuilder;
+use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at, quat_yaw, quat_identity};
 use nalgebra_glm as glm;
 
 
@@ -44,46 +43,51 @@ fn main() {
     init.setup(&mut world);
 
     let mut dispatcher = DispatcherBuilder::new()
-    .with(PlayerMovement, "player_movement", &[])
-    .with(SceneBuilder, "scene_builder", &[])
-    .build();
+        .with(SceneBuilder, "scene_builder", &[])
+        .build();
 
     dispatcher.setup(&mut world);
 
     world.insert(Scene::default());
-    world.insert(MoveCommand::default());
 
     let floor = world.create_entity()
         .with(StaticMesh(0))
-        .with(Transform {
-            position: glm::vec3(0.0, 0.0, 0.0),
-            scale: glm::vec3(10.0, 1.0, 10.0),
-            rotation: glm::vec3(0.0, 0.0, 1.0),
-        })
+        .with(Position(vec3(0.0, 0.0, 0.0)))
+        .with(Rotation(quat_identity()))
+        .with(Scale(glm::vec3(10.0, 1.0, 10.0)))
         .build();
 
-    let player = world.create_entity()
-        .with(Transform {
-            position: vec3(0.0, 4.0, 8.0),
-            scale: vec3(0.0, 0.0, 0.0),
-            rotation: vec3(0.0, 0.0, 0.0),
-        })
-        .with(Camera {
-            look_at: vec3(0.0, 2.0, -7.0)
-        })
-        .with(Player)
+    let camera = world.create_entity()
+        .with(Position(vec3(0.0, 2.0, 6.0)))
+        .with(Rotation(quat_look_at(&vec3(0.0, 2.0, -7.0), &vec3(0.0, 1.0, 0.0))))
+        .with(Camera)
         .build();
-
 
     let light = world.create_entity()
-        .with(PointLight(20.0))
-        .with(Transform {
-            position: vec3(1.5, 4.0, 4.0),
-            scale: vec3(0.0, 0.0, 0.0),
-            rotation: vec3(0.0, 0.0, 0.0),
-        })
+        .with(PointLight(40.0))
+        .with(Position(vec3(1.5, 7.0, 4.0)))
         .build();
 
+    let left_block = world.create_entity()
+        .with(StaticMesh(0))
+        .with(Position(vec3(-2.0, 1.0, -2.0)))
+        .with(Scale(vec3(1.0, 1.0, 1.0)))
+        .with(Rotation(quat_identity()))
+        .build();
+
+    let tall_block = world.create_entity()
+        .with(StaticMesh(0))
+        .with(Position(vec3(0.0, 2.0, 1.0)))
+        .with(Scale(vec3(0.5, 3.0, 0.5)))
+        .with(Rotation(quat_identity()))
+        .build();
+
+    let right_block = world.create_entity()
+        .with(StaticMesh(0))
+        .with(Position(vec3(3.0, 1.0, -4.0)))
+        .with(Scale(vec3(1.0, 2.0, 1.0)))
+        .with(Rotation(quat_identity()))
+        .build();
 
     init.dispatch(&world);
 
@@ -96,27 +100,19 @@ fn main() {
     while running {
         use std::time::Instant;
 
-        {
-            let mut move_command = world.write_resource::<MoveCommand>();
-            *move_command = MoveCommand::None;
-        }
         match input.process_raw_input() {
             Some(command) => {
                 match command {
                     Command::Close => {
                         running = false;
                     },
-                    Command::MoveCmd(next_move) => {
-                        let mut move_command = world.write_resource::<MoveCommand>();
-                        *move_command = next_move
-                    },
+                    _ => (),
                 }
             },
             None => (),
         }
 
         dispatcher.dispatch(&world);
-
 
         let start = Instant::now();
 

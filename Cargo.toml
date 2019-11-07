@@ -16,7 +16,7 @@ edition = "2018"
 
 [dependencies]
 nalgebra-glm = "0.1"
-cgmath = "0.17"
+#cgmath = "0.17"
 env_logger = "0.6"
 image = "0.21"
 log = "0.4"

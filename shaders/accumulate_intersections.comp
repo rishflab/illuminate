@@ -159,7 +159,7 @@ void main() {
 
                 float diffuse = max(-1.0 * dot(intersection.normal, light_direction), 0.0);
 
-                float shade = 5.0 * (1/(1+(light_distance * light_distance)))* diffuse;
+                float shade = 0.6 * light.intensity * (1/(1+(light_distance * light_distance)))* diffuse;
 
                 primary_value = vec4(shade, shade, shade, 0.0);
 
@@ -194,7 +194,7 @@ void main() {
 
                 float r_diffuse =  max(-1.0 * dot(intersection.normal, r_direction), 0.0);
 
-                float r_shade = 4.0 * (1/(1 + (r_distance * r_distance)))* r_diffuse;
+                float r_shade = 0.4 * light.intensity * (1/(1 + (r_distance * r_distance)))* r_diffuse;
 
                 sum += (bounce_value * r_shade);
             }

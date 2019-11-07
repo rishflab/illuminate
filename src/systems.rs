@@ -1,2 +1,2 @@
-pub mod FpsMovement;
-pub mod SceneBuilder;
+pub mod player_movement;
+pub mod scene_builder;

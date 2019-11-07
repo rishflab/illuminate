@@ -9,8 +9,11 @@ pub enum Command {
     Close,
 }
 pub enum MoveCommand {
-    MoveLeft,
-    MoveRight,
+    Left,
+    Right,
+    Forward,
+    Back,
+    Look(f64, f64),
     None,
 }
 
@@ -35,38 +38,65 @@ impl InputState{
         let mut next = None;
 
         self.events_loop.poll_events(|event| {
-            if let winit::Event::WindowEvent { event, .. } = event {
-                #[allow(unused_variables)]
-                match event {
-                    winit::WindowEvent::KeyboardInput {
-                        input:
-                        winit::KeyboardInput {
-                            virtual_keycode: Some(winit::VirtualKeyCode::Escape),
+            match event {
+                winit::Event::WindowEvent{event: window_event, ..} => {
+                    match window_event {
+                        winit::WindowEvent::KeyboardInput {
+                            input:
+                            winit::KeyboardInput {
+                                virtual_keycode: Some(winit::VirtualKeyCode::Escape),
+                                ..
+                            },
                             ..
-                        },
-                        ..
+                        } => next = Some(Command::Close),
+                        winit::WindowEvent::CloseRequested => next = Some(Command::Close),
+                        winit::WindowEvent::KeyboardInput {
+                            input:
+                            winit::KeyboardInput {
+                                virtual_keycode: Some(winit::VirtualKeyCode::Left),
+                                ..
+                            },
+                            ..
+                        } => next = Some(Command::MoveCmd(MoveCommand::Left)),
+                        winit::WindowEvent::KeyboardInput {
+                            input:
+                            winit::KeyboardInput {
+                                virtual_keycode: Some(winit::VirtualKeyCode::Right),
+                                ..
+                            },
+                            ..
+                        } => next = Some(Command::MoveCmd(MoveCommand::Right)),
+                        winit::WindowEvent::KeyboardInput {
+                            input:
+                            winit::KeyboardInput {
+                                virtual_keycode: Some(winit::VirtualKeyCode::Up),
+                                ..
+                            },
+                            ..
+                        } => next = Some(Command::MoveCmd(MoveCommand::Left)),
+                        winit::WindowEvent::KeyboardInput {
+                            input:
+                            winit::KeyboardInput {
+                                virtual_keycode: Some(winit::VirtualKeyCode::Down),
+                                ..
+                            },
+                            ..
+                        } => next = Some(Command::MoveCmd(MoveCommand::Back)),
+                        _ => (),
                     }
-                    | winit::WindowEvent::CloseRequested => next = Some(Command::Close),
-                    winit::WindowEvent::KeyboardInput {
-                        input:
-                        winit::KeyboardInput {
-                            virtual_keycode: Some(winit::VirtualKeyCode::Left),
-                            ..
+                },
+                winit::Event::DeviceEvent {event: device_event, ..} => {
+                    match device_event {
+                        winit::DeviceEvent::MouseMotion {delta} => {
+                            next = Some(Command::MoveCmd(MoveCommand::Look(delta.0, delta.1)))
                         },
-                        ..
-                    } => next = Some(Command::MoveCmd(MoveCommand::MoveLeft)),
-                    winit::WindowEvent::KeyboardInput {
-                        input:
-                        winit::KeyboardInput {
-                            virtual_keycode: Some(winit::VirtualKeyCode::Right),
-                            ..
-                        },
-                        ..
-                    } => next = Some(Command::MoveCmd(MoveCommand::MoveRight)),
-                    _ => (),
-                }
+                        _ => (),
+                    }
+                },
+                _ => (),
             }
         });
+
 
         next
 

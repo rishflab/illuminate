@@ -8,34 +8,24 @@ pub struct StaticMeshData {
 }
 
 pub struct MeshInstance {
-    pub position: glm::Vec3,
-    pub scale: glm::Vec3,
-    pub rotation: glm::Vec3,
+    pub model_matrix: glm::Mat4,
     pub mesh_id: usize,
 }
 
 impl MeshInstance {
 
-    pub fn model_matrix(&self) -> glm::Mat4 {
-        let translation = glm::translation(&self.position);
-        let rotation = glm::inverse(&glm::look_at(
-            &self.position,
-            &(self.position + self.rotation),
-            &glm::vec3(0.0,1.0,0.0)
-        ));
-        let scale = glm::scaling(&self.scale);
-        translation * rotation * scale
+    pub fn new(mesh_id: usize, position: glm::Vec3, rotation: glm::Quat, scale: glm::Vec3) -> MeshInstance {
+        let t = glm::translation(&position);
+        let r = glm::quat_to_mat4(&rotation);
+        let s = glm::scaling(&scale);
+        let model_matrix = t * r * s;
+        MeshInstance {
+            model_matrix,
+            mesh_id,
+        }
     }
 
-    pub fn update_position(&mut self, command: MoveCommand) {
-        match command {
-            MoveCommand::MoveLeft => {
-                self.position = self.position + glm::vec3(-0.1, 0.0, 0.0);
-            },
-            MoveCommand::MoveRight => {
-                self.position = self.position + glm::vec3(0.1, 0.0, 0.0);
-            },
-            _ => (),
-        }
+    pub fn model_matrix(&self) -> glm::Mat4 {
+        self.model_matrix
     }
 }

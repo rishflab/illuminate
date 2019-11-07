@@ -96,7 +96,7 @@ impl<B: Backend> Pathtracer<B> {
             &backend.adapter.memory_types,
             memory::Properties::CPU_VISIBLE,
             buffer::Usage::STORAGE,
-            &scene.camera.view_matrix().data,
+            &scene.view_matrix().data,
         );
 
         let resolution_buffer = BufferState::new(
@@ -353,8 +353,9 @@ impl<B: Backend> Pathtracer<B> {
 
     pub fn render(&mut self, scene: &Scene) {
 
-        self.camera_buffer.update_data(0, &scene.camera.view_matrix().data);
+        self.camera_buffer.update_data(0, &scene.view_matrix().data);
         self.light_buffer.update_data(0, &scene.light_data());
+        //self.model_buffer.update_data(0, &scene.model_matrices());
 
         // Use guaranteed unused acquire semaphore to get the index of the next frame we will render to
         // by using acquire_image
