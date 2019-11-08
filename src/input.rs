@@ -73,7 +73,7 @@ impl InputState{
                                 ..
                             },
                             ..
-                        } => next = Some(Command::MoveCmd(MoveCommand::Left)),
+                        } => next = Some(Command::MoveCmd(MoveCommand::Forward)),
                         winit::WindowEvent::KeyboardInput {
                             input:
                             winit::KeyboardInput {
