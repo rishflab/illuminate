@@ -14,7 +14,6 @@ use blackhole::systems::scene_builder::SceneBuilder;
 use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at, quat_yaw, quat_identity};
 use nalgebra_glm as glm;
 
-
 fn main() {
     env_logger::init();
 

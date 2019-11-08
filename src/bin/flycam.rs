@@ -10,11 +10,12 @@ use blackhole::asset::{load_gltf, MeshData};
 use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
 use blackhole::scene;
 use blackhole::components::*;
+use blackhole::resources::*;
 use blackhole::systems::player_movement::FlyingMovement;
 use blackhole::systems::scene_builder::SceneBuilder;
 use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at, quat_yaw, quat_identity};
 use nalgebra_glm as glm;
-
+use blackhole::resources::DeltaTime;
 
 fn main() {
     env_logger::init();
@@ -45,13 +46,14 @@ fn main() {
 
     let mut dispatcher = DispatcherBuilder::new()
     .with(FlyingMovement, "player_movement", &[])
-    .with(SceneBuilder, "scene_builder", &[])
+    .with(SceneBuilder, "scene_builder", &["player_movement"])
     .build();
 
     dispatcher.setup(&mut world);
 
     world.insert(Scene::default());
     world.insert(MoveCommand::default());
+    world.insert(DeltaTime::default());
 
     let floor = world.create_entity()
         .with(StaticMesh(0))
@@ -72,7 +74,6 @@ fn main() {
         .with(Position(vec3(1.5, 7.0, 4.0)))
         .build();
 
-
     init.dispatch(&world);
 
     let mut renderer = unsafe {
@@ -84,10 +85,14 @@ fn main() {
     while running {
         use std::time::Instant;
 
+        let start = Instant::now();
+
         {
             let mut move_command = world.write_resource::<MoveCommand>();
             *move_command = MoveCommand::None;
         }
+
+
         match input.process_raw_input() {
             Some(command) => {
                 match command {
@@ -105,14 +110,14 @@ fn main() {
 
         dispatcher.dispatch(&world);
 
-
-        let start = Instant::now();
-
         renderer.render(&world.fetch::<Scene>());
 
-        let duration = start.elapsed();
+        {
+            let duration = start.elapsed();
+            let mut delta_time = world.write_resource::<DeltaTime>();
+            delta_time.0 = duration;
+            println!("Frame time {:?}", duration);
+        }
 
-        println!("Frame time {:?}", duration);
     }
-
 }

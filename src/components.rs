@@ -62,3 +62,6 @@ pub struct Camera;
 impl Component for Camera {
     type Storage = VecStorage<Self>;
 }
+
+
+

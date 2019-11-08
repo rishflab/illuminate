@@ -7,3 +7,4 @@ pub mod window;
 pub mod scene;
 pub mod systems;
 pub mod components;
+pub mod resources;

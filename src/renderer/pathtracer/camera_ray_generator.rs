@@ -1,7 +1,5 @@
 use gfx_hal::{Backend, Device, pso};
-
 use gfx_hal::pso::DescriptorPool;
-
 use std::fs;
 use std::cell::RefCell;
 use std::rc::Rc;
