@@ -1,14 +1,17 @@
-use gfx_hal::{Backend, Device, pool, command, CommandPool, Compute,
-              command::MultiShot, command::CommandBuffer};
-use super::device::DeviceState;
+use gfx_hal::{
+    Backend, pool, command,
+    device::Device,
+    pool::CommandPool,
+    command::CommandBuffer,
 
+};
+use super::device::DeviceState;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-
 pub struct CommandState<B: Backend> {
-    pub command_pools: Vec<CommandPool<B, Compute>>,
-    pub command_buffers: Vec<CommandBuffer<B, Compute, MultiShot>>,
+    pub command_pools: Vec<B::CommandPool>,
+    pub command_buffers: Vec<B::CommandBuffer>,
     pub image_acquire_semaphores: Vec<B::Semaphore>,
     pub free_acquire_semaphore: B::Semaphore,
     pub submission_complete_semaphores: Vec<B::Semaphore>,
@@ -26,7 +29,6 @@ impl<B: Backend> CommandState<B> {
     ) -> Self {
 
         let device = &device_state.borrow().device;
-
 
         // Define maximum number of frames we want to be able to be "in flight" (being computed
         // simultaneously) at once
@@ -57,7 +59,7 @@ impl<B: Backend> CommandState<B> {
 
             cmd_pools.push(
                 device
-                    .create_command_pool_typed(&device_state.borrow().queues, pool::CommandPoolCreateFlags::empty())
+                    .create_command_pool(device_state.borrow().queues.family, pool::CommandPoolCreateFlags::empty())
                     .expect("Can't create command pool"),
             );
 
@@ -82,7 +84,8 @@ impl<B: Backend> CommandState<B> {
                     .create_fence(true)
                     .expect("Could not create semaphore"),
             );
-            cmd_buffers.push(cmd_pools[i].acquire_command_buffer::<command::MultiShot>());
+
+            cmd_buffers.push(cmd_pools[i].allocate_one(command::Level::Primary));
         }
 
         CommandState {

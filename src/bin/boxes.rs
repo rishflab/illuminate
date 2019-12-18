@@ -99,23 +99,25 @@ fn main() {
     while running {
         use std::time::Instant;
 
-        match input.process_raw_input() {
-            Some(command) => {
-                match command {
-                    Command::Close => {
-                        running = false;
-                    },
-                    _ => (),
-                }
-            },
-            None => (),
-        }
+//        match input.process_raw_input() {
+//            Some(command) => {
+//                match command {
+//                    Command::Close => {
+//                        running = false;
+//                    },
+//                    _ => (),
+//                }
+//            },
+//            None => (),
+//        }
 
         dispatcher.dispatch(&world);
 
         let start = Instant::now();
 
         renderer.render(&world.fetch::<Scene>());
+
+        println!("aaaaaaa");
 
         let duration = start.elapsed();
 

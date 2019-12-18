@@ -1,5 +1,7 @@
 use std::string::ToString;
-use winit;
+use winit::{
+    window::WindowBuilder,
+};
 
 pub struct Dims {
     pub width: u32,
@@ -13,14 +15,15 @@ pub const DIMS: Dims = Dims {
 
 
 pub struct WindowState {
-    pub wb: Option<winit::WindowBuilder>,
+    pub wb: Option<
+        WindowBuilder>,
 }
 
 impl WindowState {
     pub fn new() -> WindowState {
 
-        let wb = winit::WindowBuilder::new()
-            .with_dimensions(winit::dpi::LogicalSize::new(
+        let wb = WindowBuilder::new()
+            .with_inner_size(winit::dpi::LogicalSize::new(
                 DIMS.width as _,
                 DIMS.height as _,
             )).with_title("raytracer".to_string());

@@ -82,42 +82,41 @@ fn main() {
 
     let mut running = true;
 
-    while running {
-        use std::time::Instant;
-
-        let start = Instant::now();
-
-        {
-            let mut move_command = world.write_resource::<MoveCommand>();
-            *move_command = MoveCommand::None;
-        }
-
-
-        match input.process_raw_input() {
-            Some(command) => {
-                match command {
-                    Command::Close => {
-                        running = false;
-                    },
-                    Command::MoveCmd(next_move) => {
-                        let mut move_command = world.write_resource::<MoveCommand>();
-                        *move_command = next_move
-                    },
-                }
-            },
-            None => (),
-        }
-
-        dispatcher.dispatch(&world);
-
-        renderer.render(&world.fetch::<Scene>());
-
-        {
-            let duration = start.elapsed();
-            let mut delta_time = world.write_resource::<DeltaTime>();
-            delta_time.0 = duration;
-            println!("Frame time {:?}", duration);
-        }
-
-    }
+//    while running {
+//        use std::time::Instant;
+//
+//        let start = Instant::now();
+//
+//        {
+//            let mut move_command = world.write_resource::<MoveCommand>();
+//            *move_command = MoveCommand::None;
+//        }
+//
+//        match input.process_raw_input() {
+//            Some(command) => {
+//                match command {
+//                    Command::Close => {
+//                        running = false;
+//                    },
+//                    Command::MoveCmd(next_move) => {
+//                        let mut move_command = world.write_resource::<MoveCommand>();
+//                        *move_command = next_move
+//                    },
+//                }
+//            },
+//            None => (),
+//        }
+//
+//        dispatcher.dispatch(&world);
+//
+//        renderer.render(&world.fetch::<Scene>());
+//
+//        {
+//            let duration = start.elapsed();
+//            let mut delta_time = world.write_resource::<DeltaTime>();
+//            delta_time.0 = duration;
+//            println!("Frame time {:?}", duration);
+//        }
+//
+//    }
 }

@@ -1,4 +1,4 @@
-use gfx_hal::{Backend, Device, pso};
+use gfx_hal::{Backend, pso, prelude::*};
 
 use gfx_hal::pso::DescriptorPool;
 
@@ -84,11 +84,8 @@ impl<B: Backend> RayTriangleIntersector<B> {
         let shader = {
             let path = Path::new("shaders").join("bounces.comp");
             let glsl = fs::read_to_string(path.as_path()).unwrap();
-            let spirv: Vec<u8> = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute)
-                .expect("Could not compile shader")
-                .bytes()
-                .map(|b| b.unwrap())
-                .collect();
+            let file = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute).unwrap();
+            let spirv: Vec<u32> = pso::read_spirv(file).unwrap();
             device.create_shader_module(&spirv).expect("Could not load shader module")
         };
 
@@ -149,7 +146,7 @@ impl<B: Backend> RayTriangleIntersector<B> {
                 },
             ],
             pso::DescriptorPoolCreateFlags::empty(),
-        ).expect("Camera ray descriptor pool creation failed");;
+        ).expect("Camera ray descriptor pool creation failed");
 
         let desc_set = pool.allocate_set(&set_layout).expect("Camera ray set allocation failed");
 

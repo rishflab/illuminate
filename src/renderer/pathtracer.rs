@@ -11,7 +11,7 @@ use crate::renderer::core::device::DeviceState;
 use crate::renderer::core::swapchain::SwapchainState;
 use crate::renderer::core::command::CommandState;
 use crate::renderer::core::buffer::BufferState;
-use crate::scene::{Scene, MeshView, light::PointLight};
+use crate::scene::{Scene};
 use self::camera_ray_generator::CameraRayGenerator;
 use self::ray_triangle_intersector::RayTriangleIntersector;
 use self::accumulator::Accumulator;
@@ -21,12 +21,11 @@ use self::aabb_calculator::AabbCalculator;
 
 use self::types::Ray;
 use self::types::Intersection;
-use self::types::Camera;
 use crate::window::DIMS;
 use crate::renderer::RAY_SAMPLES;
 use crate::renderer::WORK_GROUP_SIZE;
 
-use gfx_hal::{Backend, Device, Submission, Swapchain, command, pso, memory, buffer, pool};
+use gfx_hal::{prelude::*, Backend, command, pso, memory, buffer, pool, queue::Submission, window::SwapImageIndex};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -87,7 +86,11 @@ impl<B: Backend> Pathtracer<B> {
 
         let vertex_skinner = VertexSkinner::new(Rc::clone(&device));
 
+        //println!("Created pipelines");
+
         let aabb_calculator = AabbCalculator::new(Rc::clone(&device));
+
+
 
         println!("memory types: {:?}", &backend.adapter.memory_types);
 
@@ -281,15 +284,15 @@ impl<B: Backend> Pathtracer<B> {
         let mut staging_pool = device
             .borrow()
             .device
-            .create_command_pool_typed(
-                &device.borrow().queues,
+            .create_command_pool(
+                device.borrow().queues.family,
                 pool::CommandPoolCreateFlags::empty(),
             )
             .expect("Can't create staging command pool");
 
-        let mut cmd_buffer = staging_pool.acquire_command_buffer::<command::OneShot>();
+        let mut cmd_buffer = staging_pool.allocate_one(command::Level::Primary);
 
-        cmd_buffer.begin();
+        cmd_buffer.begin_primary(command::CommandBufferFlags::ONE_TIME_SUBMIT);
 
         cmd_buffer.copy_buffer(
             &staging_index_buffer.get_buffer(),
@@ -318,12 +321,12 @@ impl<B: Backend> Pathtracer<B> {
         cmd_buffer.finish();
 
         device.borrow_mut().queues.queues[0]
-            .submit_nosemaphores(&[cmd_buffer], Some(&mut transfered_image_fence));
+            .submit_without_semaphores(&[cmd_buffer], Some(&mut transfered_image_fence));
 
         device
             .borrow()
             .device
-            .destroy_command_pool(staging_pool.into_raw());
+            .destroy_command_pool(staging_pool);
 
         Pathtracer {
             swapchain: swapchain,
@@ -355,7 +358,7 @@ impl<B: Backend> Pathtracer<B> {
 
         self.camera_buffer.update_data(0, &scene.view_matrix().data);
         self.light_buffer.update_data(0, &scene.light_data());
-        //self.model_buffer.update_data(0, &scene.model_matrices());
+        self.model_buffer.update_data(0, &scene.model_matrices());
 
         // Use guaranteed unused acquire semaphore to get the index of the next frame we will render to
         // by using acquire_image
@@ -391,7 +394,7 @@ impl<B: Backend> Pathtracer<B> {
             &self.device.borrow().device
                 .reset_fence(&self.command.submission_complete_fences[frame_idx])
                 .expect("Failed to reset fence");
-            self.command.command_pools[frame_idx].reset();
+            self.command.command_pools[frame_idx].reset(false);
         }
 
         // Rendering
@@ -400,7 +403,7 @@ impl<B: Backend> Pathtracer<B> {
 
         unsafe {
 
-            cmd_buffer.begin(false);
+            cmd_buffer.begin_primary(command::CommandBufferFlags::ONE_TIME_SUBMIT);
 
             cmd_buffer.bind_compute_pipeline(&self.camera_ray_generator.pipeline);
             cmd_buffer.bind_compute_descriptor_sets(
@@ -465,6 +468,7 @@ impl<B: Backend> Pathtracer<B> {
 
 
             for view in scene.instance_views() {
+
                 cmd_buffer.bind_compute_descriptor_sets(
                     &self.aabb_calculator.layout,
                     0,
@@ -478,10 +482,12 @@ impl<B: Backend> Pathtracer<B> {
                     0,
                     &[view.start, view.start + view.length, view.instance_id],
                 );
+                println!("{:?}", scene.mesh_instances.len());
+
                 cmd_buffer.dispatch([scene.mesh_instances.len() as u32, 1, 1]);
 
                 let aabb_barrier = memory::Barrier::Buffer{
-                    states: buffer::Access::SHADER_WRITE..buffer::Access::SHADER_READ,
+                    states: buffer::Access::SHADER_READ..buffer::Access::SHADER_READ,
                     target: self.aabb_buffer.get_buffer(),
                     families: None,
                     range: None..None
@@ -532,7 +538,6 @@ impl<B: Backend> Pathtracer<B> {
 
             cmd_buffer.dispatch([(DIMS.width*DIMS.height)/(WORK_GROUP_SIZE*WORK_GROUP_SIZE),1 , 1]);
 
-
             cmd_buffer.finish();
 
             let submission = Submission {
@@ -550,9 +555,10 @@ impl<B: Backend> Pathtracer<B> {
             // present frame
             self.swapchain.swapchain.present(
                 &mut self.device.borrow_mut().queues.queues[0],
-                swap_image as gfx_hal::SwapImageIndex,
+                swap_image as SwapImageIndex,
                 Some(&self.command.submission_complete_semaphores[frame_idx]),
             );
+
         }
         // Increment our frame
         self.command.frame += 1;

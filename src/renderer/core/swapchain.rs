@@ -1,4 +1,7 @@
-use gfx_hal::{Backend, Device, Surface, SwapchainConfig, image as i, format, format::ChannelType, pso, pso::DescriptorPool};
+use gfx_hal::{
+    Backend, image as i, format, format::ChannelType, pso, pso::DescriptorPool, prelude::*,
+    window::SwapchainConfig,
+};
 use super::device::DeviceState;
 use super::backend::BackendState;
 use crate::window::DIMS;
@@ -19,11 +22,8 @@ pub struct SwapchainState<B: Backend> {
 
 impl<B: Backend> SwapchainState<B> {
     pub unsafe fn new(backend: &mut BackendState<B>, device: Rc<RefCell<DeviceState<B>>>) -> Self {
-
-        let (caps, formats, _present_modes) = backend
-            .surface
-            .compatibility(&device.borrow().physical_device);
-        println!("formats: {:?}", formats);
+        let caps = backend.surface.capabilities(&device.borrow().physical_device);
+        let formats = backend.surface.supported_formats(&device.borrow().physical_device);
         let format = formats.map_or(format::Format::Rgba8Srgb, |formats| {
             formats
                 .iter()
@@ -31,7 +31,6 @@ impl<B: Backend> SwapchainState<B> {
                 .map(|format| *format)
                 .unwrap_or(formats[0])
         });
-
         println!("Surface format: {:?}", format);
 
         let dims = Extent2D{
@@ -40,11 +39,10 @@ impl<B: Backend> SwapchainState<B> {
         };
 
         let mut swap_config = SwapchainConfig::from_caps(&caps, format, dims);
-
-        swap_config.present_mode = gfx_hal::PresentMode::Immediate;
+        //swap_config.present_mode = gfx_hal::window::PresentMode::Immediate;
         swap_config.image_usage = i::Usage::STORAGE | i::Usage::COLOR_ATTACHMENT ;
-
         println!("Swap Config: {:?}", swap_config);
+
         let extent = swap_config.extent.to_extent();
 
         let (swapchain, backbuffer) = device

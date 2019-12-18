@@ -1,4 +1,4 @@
-use gfx_hal::{Backend, Device, pso};
+use gfx_hal::{Backend, pso, prelude::*};
 
 use gfx_hal::pso::DescriptorPool;
 
@@ -9,6 +9,7 @@ use std::io::Read;
 use std::path::Path;
 use crate::renderer::ENTRY_NAME;
 use crate::renderer::core::device::DeviceState;
+use std::ops::Range;
 
 
 pub struct AabbCalculator<B: Backend> {
@@ -55,11 +56,8 @@ impl<B: Backend> AabbCalculator<B> {
         let shader = {
             let path = Path::new("shaders").join("calculate_aabbs.comp");
             let glsl = fs::read_to_string(path.as_path()).unwrap();
-            let spirv: Vec<u8> = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute)
-                .expect("Could not compile aabb shader")
-                .bytes()
-                .map(|b| b.unwrap())
-                .collect();
+            let file = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute).unwrap();
+            let spirv: Vec<u32> = pso::read_spirv(file).unwrap();
             device.create_shader_module(&spirv).expect("Could not load shader module")
         };
 
@@ -82,7 +80,7 @@ impl<B: Backend> AabbCalculator<B> {
 
             ],
             &[],
-        ).expect("Camera ray set layout creation failed");;
+        ).expect("Camera ray set layout creation failed");
 
         let mut pool = device.create_descriptor_pool(
             2,
@@ -97,12 +95,12 @@ impl<B: Backend> AabbCalculator<B> {
                 },
             ],
             pso::DescriptorPoolCreateFlags::empty(),
-        ).expect("Camera ray descriptor pool creation failed");;
+        ).expect("Camera ray descriptor pool creation failed");
 
 
         let desc_set = pool.allocate_set(&set_layout).expect("Camera ray set allocation failed");
 
-        let push_constants = vec![(pso::ShaderStageFlags::COMPUTE, 0..3)];
+        let push_constants = &[(pso::ShaderStageFlags::COMPUTE, 0..12)];
 
         let layout = device.create_pipeline_layout(Some(&set_layout), push_constants)
             .expect("Camera ray pipeline layout creation failed");
