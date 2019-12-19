@@ -29,13 +29,13 @@ impl<'a> System<'a> for FlyingMovement {
                 match *move_command {
                     MoveCommand::Forward => {
                         let temp: glm::Quat = rotation.0;
-                        let delta = delta_t * move_speed * glm::quat_cross_vec(&temp, &vec3(0.0, 0.0, -1.0));
-                        println!("delta: {:?}, {:?} ", delta, glm::length(&delta));
+                        let delta = move_speed * delta_t * glm::quat_cross_vec(&temp, &vec3(0.0, 0.0, -1.0));
+                        //println!("delta: {:?}, {:?} ", delta, glm::length(&delta));
                         position.0 = position.0 + (delta);
                     },
                     MoveCommand::Back => {
                         let temp: glm::Quat = rotation.0;
-                        let delta = move_speed * glm::quat_cross_vec(&temp, &vec3(0.0, 0.0, 1.0));
+                        let delta = move_speed * delta_t * glm::quat_cross_vec(&temp, &vec3(0.0, 0.0, 1.0));
                         position.0 = position.0 + (delta);
                     },
                     MoveCommand::Look(x, y) => {

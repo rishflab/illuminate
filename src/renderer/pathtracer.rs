@@ -34,7 +34,6 @@ pub struct Pathtracer<B: Backend> {
     pub swapchain: SwapchainState<B>,
     pub device: Rc<RefCell<DeviceState<B>>>,
     pub backend: BackendState<B>,
-    pub window: WindowState,
     pub command: CommandState<B>,
     pub camera_ray_generator: CameraRayGenerator<B>,
     pub ray_triangle_intersector: RayTriangleIntersector<B>,
@@ -57,7 +56,8 @@ pub struct Pathtracer<B: Backend> {
 
 impl<B: Backend> Pathtracer<B> {
 
-    pub unsafe fn new(mut backend: BackendState<B>, window: WindowState, scene: &Scene) -> Self {
+//    pub unsafe fn new(mut backend: BackendState<B>, window: WindowState, scene: &Scene) -> Self {
+    pub unsafe fn new(mut backend: BackendState<B>, scene: &Scene) -> Self {
 
         println!("creating render state");
 
@@ -332,7 +332,6 @@ impl<B: Backend> Pathtracer<B> {
             swapchain: swapchain,
             device: device,
             backend: backend,
-            window: window,
             command,
             camera_ray_generator,
             ray_triangle_intersector,
@@ -482,7 +481,6 @@ impl<B: Backend> Pathtracer<B> {
                     0,
                     &[view.start, view.start + view.length, view.instance_id],
                 );
-                println!("{:?}", scene.mesh_instances.len());
 
                 cmd_buffer.dispatch([scene.mesh_instances.len() as u32, 1, 1]);
 

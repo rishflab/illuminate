@@ -5,33 +5,61 @@ use gfx_hal::{
     adapter::{MemoryType, Adapter, PhysicalDevice},
 };
 use crate::window::WindowState;
-use crate::input::InputState;
 use winit::window::Window;
 use std::borrow::Borrow;
+use std::mem::{ManuallyDrop};
 
+
+//pub struct BackendState<B: Backend> {
+//    pub surface: B::Surface,
+//    pub adapter: AdapterState<B>,
+//    //pub window: Window,
+//}
 
 pub struct BackendState<B: Backend> {
-    pub surface: B::Surface,
+    pub instance: Option<B::Instance>,
+    pub surface: ManuallyDrop<B::Surface>,
     pub adapter: AdapterState<B>,
-    //pub window: Window,
+    /// Needs to be kept alive even if its not used directly
+    #[allow(dead_code)]
+    pub window: winit::window::Window,
 }
 
-pub fn create_backend(window_state: &mut WindowState, input_state: &mut InputState) -> (BackendState<back::Backend>, back::Instance) {
-    let window = window_state.wb.take().unwrap().build(&input_state.event_loop).unwrap();
-    let instance = back::Instance::create("blackhole", 1)
+//pub fn create_backend(window_state: &mut WindowState, input_state: &mut InputState) -> (BackendState<back::Backend>, back::Instance) {
+//    let window = window_state.wb.take().unwrap().build(&input_state.event_loop).unwrap();
+//    let instance = back::Instance::create("blackhole", 1)
+//        .expect("Failed to create an instance!");
+//    let surface = unsafe {
+//        instance.create_surface(&window).expect("Failed to create a surface!")
+//    };
+//    let mut adapters = instance.enumerate_adapters();
+//    (
+//        BackendState {
+//            adapter: AdapterState::new(&mut adapters),
+//            surface,
+//            //window,
+//        },
+//        instance
+//    )
+//}
+
+pub fn create_backend(
+    wb: winit::window::WindowBuilder,
+    event_loop: &winit::event_loop::EventLoop<()>,
+) -> BackendState<back::Backend> {
+    let window = wb.build(event_loop).unwrap();
+    let instance = back::Instance::create("gfx-rs colour-uniform", 1)
         .expect("Failed to create an instance!");
     let surface = unsafe {
         instance.create_surface(&window).expect("Failed to create a surface!")
     };
     let mut adapters = instance.enumerate_adapters();
-    (
-        BackendState {
-            adapter: AdapterState::new(&mut adapters),
-            surface,
-            //window,
-        },
-        instance
-    )
+    BackendState {
+        instance: Some(instance),
+        adapter: AdapterState::new(&mut adapters),
+        surface: ManuallyDrop::new(surface),
+        window,
+    }
 }
 
 pub struct AdapterState<B: Backend> {

@@ -3,7 +3,7 @@ extern crate blackhole;
 use blackhole::renderer::pathtracer::Pathtracer;
 use blackhole::window::WindowState;
 use blackhole::renderer::core::backend::{create_backend};
-use blackhole::input::{InputState, Command, MoveCommand};
+use blackhole::input::{Command, MoveCommand, process_raw_input, process_window_event};
 use blackhole::scene::{Scene};
 use specs::prelude::*;
 use blackhole::asset::{load_gltf, MeshData};
@@ -11,22 +11,31 @@ use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
 use blackhole::scene;
 use blackhole::components::*;
 use blackhole::resources::*;
+use blackhole::window::DIMS;
 use blackhole::systems::player_movement::FlyingMovement;
 use blackhole::systems::scene_builder::SceneBuilder;
 use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at, quat_yaw, quat_identity};
 use nalgebra_glm as glm;
 use blackhole::resources::DeltaTime;
+use std::time::Instant;
 
 fn main() {
     env_logger::init();
 
+    let event_loop = winit::event_loop::EventLoop::new();
+    let window_builder = winit::window::WindowBuilder::new()
+        .with_min_inner_size(winit::dpi::LogicalSize::new(1.0, 1.0))
+        .with_inner_size(winit::dpi::LogicalSize::new(
+            DIMS.width as _,
+            DIMS.height as _,
+        ))
+        .with_title("colour-uniform".to_string());
+
+    let backend = create_backend(window_builder, &event_loop);
+
     let asset_folder = "assets";
     let gltf = load_gltf(asset_folder, "untitled.gltf")
         .expect("failed to load gltf");
-
-    let mut window = WindowState::new();
-    let mut input = InputState::new();
-    let (backend, _instance) = create_backend(&mut window, &mut input);
 
     let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
 
@@ -77,46 +86,56 @@ fn main() {
     init.dispatch(&world);
 
     let mut renderer = unsafe {
-        Pathtracer::new(backend, window, &world.fetch::<Scene>())
+        Pathtracer::new(backend, &world.fetch::<Scene>())
     };
 
-    let mut running = true;
+    let mut start = Instant::now();
 
-//    while running {
-//        use std::time::Instant;
-//
-//        let start = Instant::now();
-//
-//        {
-//            let mut move_command = world.write_resource::<MoveCommand>();
-//            *move_command = MoveCommand::None;
-//        }
-//
-//        match input.process_raw_input() {
-//            Some(command) => {
-//                match command {
-//                    Command::Close => {
-//                        running = false;
-//                    },
-//                    Command::MoveCmd(next_move) => {
-//                        let mut move_command = world.write_resource::<MoveCommand>();
-//                        *move_command = next_move
-//                    },
-//                }
-//            },
-//            None => (),
-//        }
-//
-//        dispatcher.dispatch(&world);
-//
-//        renderer.render(&world.fetch::<Scene>());
-//
-//        {
-//            let duration = start.elapsed();
-//            let mut delta_time = world.write_resource::<DeltaTime>();
-//            delta_time.0 = duration;
-//            println!("Frame time {:?}", duration);
-//        }
-//
-//    }
+    event_loop.run(move|event, _, control_flow| {
+        *control_flow = winit::event_loop::ControlFlow::Poll;
+
+        let start = Instant::now();
+
+        match event {
+            winit::event::Event::WindowEvent { event, .. } =>
+                {
+                    #[allow(unused_variables)]
+                        match event {
+                        winit::event::WindowEvent::KeyboardInput {
+                            input:
+                            winit::event::KeyboardInput {
+                                virtual_keycode: Some(winit::event::VirtualKeyCode::Escape),
+                                ..
+                            },
+                            ..
+                        }
+                        | winit::event::WindowEvent::CloseRequested => {
+                            *control_flow = winit::event_loop::ControlFlow::Exit
+                        }
+                        winit::event::WindowEvent::KeyboardInput {..} => {
+                            println!("Keyboard input");
+                            let mut move_command = world.write_resource::<MoveCommand>();
+                            *move_command = process_window_event(&event);
+                        }
+                        winit::event::WindowEvent::RedrawRequested => {
+                            println!("RedrawRequested");
+                            dispatcher.dispatch(&world);
+                            renderer.render(&world.fetch::<Scene>());
+                            {
+                                let duration = start.elapsed();
+                                let mut delta_time = world.write_resource::<DeltaTime>();
+                                delta_time.0 = duration;
+                                println!("frame time:{:?}", duration);
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+            winit::event::Event::EventsCleared => {
+                renderer.backend.window.request_redraw();
+                println!("EventsCleared");
+            }
+            _ => (),
+        }
+    });
 }

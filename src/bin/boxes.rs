@@ -3,12 +3,13 @@ extern crate blackhole;
 use blackhole::renderer::pathtracer::Pathtracer;
 use blackhole::window::WindowState;
 use blackhole::renderer::core::backend::{create_backend};
-use blackhole::input::{InputState, Command, MoveCommand};
+use blackhole::input::{Command, MoveCommand};
 use blackhole::scene::{Scene};
 use specs::prelude::*;
 use blackhole::asset::{load_gltf, MeshData};
 use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
 use blackhole::scene;
+use blackhole::window::DIMS;
 use blackhole::components::*;
 use blackhole::systems::scene_builder::SceneBuilder;
 use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at, quat_yaw, quat_identity};
@@ -21,9 +22,16 @@ fn main() {
     let gltf = load_gltf(asset_folder, "untitled.gltf")
         .expect("failed to load gltf");
 
-    let mut window = WindowState::new();
-    let mut input = InputState::new();
-    let (backend, _instance) = create_backend(&mut window, &mut input);
+    let event_loop = winit::event_loop::EventLoop::new();
+    let window_builder = winit::window::WindowBuilder::new()
+        .with_min_inner_size(winit::dpi::LogicalSize::new(1.0, 1.0))
+        .with_inner_size(winit::dpi::LogicalSize::new(
+            DIMS.width as _,
+            DIMS.height as _,
+        ))
+        .with_title("colour-uniform".to_string());
+
+    let backend = create_backend(window_builder, &event_loop);
 
     let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
 
@@ -91,37 +99,41 @@ fn main() {
     init.dispatch(&world);
 
     let mut renderer = unsafe {
-        Pathtracer::new(backend, window, &world.fetch::<Scene>())
+        Pathtracer::new(backend,  &world.fetch::<Scene>())
     };
 
-    let mut running = true;
+    event_loop.run(move|event, _, control_flow| {
+        *control_flow = winit::event_loop::ControlFlow::Poll;
 
-    while running {
-        use std::time::Instant;
-
-//        match input.process_raw_input() {
-//            Some(command) => {
-//                match command {
-//                    Command::Close => {
-//                        running = false;
-//                    },
-//                    _ => (),
-//                }
-//            },
-//            None => (),
-//        }
-
-        dispatcher.dispatch(&world);
-
-        let start = Instant::now();
-
-        renderer.render(&world.fetch::<Scene>());
-
-        println!("aaaaaaa");
-
-        let duration = start.elapsed();
-
-        println!("Frame time {:?}", duration);
-    }
-
+        match event {
+            winit::event::Event::WindowEvent { event, .. } =>
+                {
+                    #[allow(unused_variables)]
+                        match event {
+                        winit::event::WindowEvent::KeyboardInput {
+                            input:
+                            winit::event::KeyboardInput {
+                                virtual_keycode: Some(winit::event::VirtualKeyCode::Escape),
+                                ..
+                            },
+                            ..
+                        }
+                        | winit::event::WindowEvent::CloseRequested => {
+                            *control_flow = winit::event_loop::ControlFlow::Exit
+                        }
+                        winit::event::WindowEvent::RedrawRequested => {
+                            println!("RedrawRequested");
+                            dispatcher.dispatch(&world);
+                            renderer.render(&world.fetch::<Scene>());
+                        }
+                        _ => (),
+                    }
+                }
+            winit::event::Event::EventsCleared => {
+                renderer.backend.window.request_redraw();
+                println!("EventsCleared");
+            }
+            _ => (),
+        }
+    });
 }
