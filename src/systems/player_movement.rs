@@ -88,10 +88,9 @@ impl<'a> System<'a> for FlyingFPSMovement {
                     let delta = move_speed * delta_t * glm::quat_cross_vec(&temp, &vec3(1.0, 0.0, 0.0));
                     position.0 = position.0 + (delta);
                 }
-                let pitch: glm::Quat = glm::quat_angle_axis(glm::radians(&vec1(-1.0 * roll_sens * mouse.y as f32)).x, &vec3(1.0, 0.0, 0.0));
-                let yaw: glm::Quat = glm::quat_angle_axis(glm::radians(&vec1(-1.0 * roll_sens * mouse.x as f32)).x, &vec3(0.0, 1.0, 0.0));
-                rotation.0 = rotation.0 * pitch;
-                rotation.0 = yaw * rotation.0;
+                let pitch: glm::Quat = glm::quat_angle_axis(glm::radians(&vec1(roll_sens * mouse.y as f32)).x, &vec3(-1.0, 0.0, 0.0));
+                let yaw: glm::Quat = glm::quat_angle_axis(glm::radians(&vec1(roll_sens * mouse.x as f32)).x, &vec3(0.0, -1.0, 0.0));
+                rotation.0 = yaw * rotation.0 * pitch;
                 mouse.reset();
             })
     }
