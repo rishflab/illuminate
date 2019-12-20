@@ -3,7 +3,7 @@ extern crate blackhole;
 use blackhole::renderer::pathtracer::Pathtracer;
 use blackhole::window::WindowState;
 use blackhole::renderer::core::backend::{create_backend};
-use blackhole::input::{Command, MoveCommand, process_raw_input, process_window_event};
+use blackhole::input::{KeyboardState, MouseTravel};
 use blackhole::scene::{Scene};
 use specs::prelude::*;
 use blackhole::asset::{load_gltf, MeshData};
@@ -18,11 +18,14 @@ use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at
 use nalgebra_glm as glm;
 use blackhole::resources::DeltaTime;
 use std::time::Instant;
+use std::{thread, time};
+use winit::platform::desktop::EventLoopExtDesktop;
+use winit::event::{DeviceEvent, VirtualKeyCode, ElementState};
 
 fn main() {
     env_logger::init();
 
-    let event_loop = winit::event_loop::EventLoop::new();
+    let mut event_loop = winit::event_loop::EventLoop::new();
     let window_builder = winit::window::WindowBuilder::new()
         .with_min_inner_size(winit::dpi::LogicalSize::new(1.0, 1.0))
         .with_inner_size(winit::dpi::LogicalSize::new(
@@ -61,7 +64,8 @@ fn main() {
     dispatcher.setup(&mut world);
 
     world.insert(Scene::default());
-    world.insert(MoveCommand::default());
+    world.insert(KeyboardState::default());
+    world.insert(MouseTravel::default());
     world.insert(DeltaTime::default());
 
     let floor = world.create_entity()
@@ -91,51 +95,59 @@ fn main() {
 
     let mut start = Instant::now();
 
-    event_loop.run(move|event, _, control_flow| {
+
+    event_loop.run( move |event, _, control_flow| {
         *control_flow = winit::event_loop::ControlFlow::Poll;
-
-        let start = Instant::now();
-
+        #[allow(unused_variables)]
         match event {
-            winit::event::Event::WindowEvent { event, .. } =>
-                {
-                    #[allow(unused_variables)]
-                        match event {
-                        winit::event::WindowEvent::KeyboardInput {
-                            input:
-                            winit::event::KeyboardInput {
-                                virtual_keycode: Some(winit::event::VirtualKeyCode::Escape),
-                                ..
-                            },
+            winit::event::Event::WindowEvent { event, .. } => {
+                match event {
+                    winit::event::WindowEvent::KeyboardInput {
+                        input:
+                        winit::event::KeyboardInput {
+                            virtual_keycode: Some(winit::event::VirtualKeyCode::Escape),
                             ..
-                        }
-                        | winit::event::WindowEvent::CloseRequested => {
-                            *control_flow = winit::event_loop::ControlFlow::Exit
-                        }
-                        winit::event::WindowEvent::KeyboardInput {..} => {
-                            println!("Keyboard input");
-                            let mut move_command = world.write_resource::<MoveCommand>();
-                            *move_command = process_window_event(&event);
-                        }
-                        winit::event::WindowEvent::RedrawRequested => {
-                            println!("RedrawRequested");
-                            dispatcher.dispatch(&world);
-                            renderer.render(&world.fetch::<Scene>());
-                            {
-                                let duration = start.elapsed();
-                                let mut delta_time = world.write_resource::<DeltaTime>();
-                                delta_time.0 = duration;
-                                println!("frame time:{:?}", duration);
-                            }
-                        }
-                        _ => (),
+                        },
+                        ..
                     }
+                    | winit::event::WindowEvent::CloseRequested => {
+                        *control_flow = winit::event_loop::ControlFlow::Exit
+                    }
+                    winit::event::WindowEvent::RedrawRequested => {
+                        println!("RedrawRequested");
+                        start = Instant::now();
+                        dispatcher.dispatch(&world);
+                        renderer.render(&world.fetch::<Scene>());
+                        {
+                            let duration = start.elapsed();
+                            let mut delta_time = world.write_resource::<DeltaTime>();
+                            delta_time.0 = duration;
+                            println!("frame time:{:?}", duration);
+                        }
+                        println!("");
+                    }
+                    _ => (),
                 }
+            }
+            winit::event::Event::DeviceEvent { event,  .. } => {
+                match event {
+                    DeviceEvent::MouseMotion { delta } => {
+                        let mut mouse_travel = world.write_resource::<MouseTravel>();
+                        mouse_travel.add(delta);
+                    },
+                    DeviceEvent::Key(keyboard_input) => {
+                        let mut keyboard_state = world.write_resource::<KeyboardState>();
+                        keyboard_state.process_device_input(keyboard_input);
+                    }
+                    _ => (),
+                }
+            }
             winit::event::Event::EventsCleared => {
-                renderer.backend.window.request_redraw();
                 println!("EventsCleared");
+                renderer.backend.window.request_redraw();
             }
             _ => (),
         }
     });
+
 }

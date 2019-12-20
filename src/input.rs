@@ -4,141 +4,73 @@ use winit::{
 };
 use std::borrow::{Borrow, BorrowMut};
 use std::ops::Deref;
-
-
-#[derive(Debug)]
-pub enum Command {
-    MoveCmd(MoveCommand),
-    Close,
-}
+use std::collections::HashSet;
 
 #[derive(Debug)]
-pub enum MoveCommand {
-    Left,
-    Right,
-    Forward,
-    Back,
-    Look(f64, f64),
-    None,
+pub struct MouseTravel {
+    pub x: f64,
+    pub y: f64,
 }
 
-impl Default for MoveCommand {
-    fn default() -> Self{
-        MoveCommand::None
+impl Default for MouseTravel {
+    fn default() -> Self {
+        MouseTravel {
+            x: 0.0,
+            y: 0.0,
+        }
     }
 }
 
-
-pub fn process_window_event(event: &WindowEvent) -> MoveCommand {
-    match event {
-        WindowEvent::KeyboardInput {
-            input:
-            KeyboardInput {
-                virtual_keycode: Some(VirtualKeyCode::Left),
-                ..
-            },
-            ..
-        } => MoveCommand::Left,
-        WindowEvent::KeyboardInput {
-            input:
-            KeyboardInput{
-                virtual_keycode: Some(VirtualKeyCode::Right),
-                ..
-            },
-            ..
-        } => MoveCommand::Right,
-        WindowEvent::KeyboardInput {
-            input:
-            KeyboardInput {
-                virtual_keycode: Some(VirtualKeyCode::Up),
-                state: ElementState::Pressed,
-                ..
-            },
-            ..
-        } => MoveCommand::Forward,
-        WindowEvent::KeyboardInput {
-            input:
-            KeyboardInput {
-                virtual_keycode: Some(VirtualKeyCode::Down),
-                state: ElementState::Pressed,
-                ..
-            },
-            ..
-        } => MoveCommand::Back,
-        _ => MoveCommand::None,
+impl MouseTravel {
+    pub fn add(&mut self, delta: (f64, f64)) {
+        self.x += delta.0;
+        self.y += delta.1;
+    }
+    pub fn reset(&mut self) {
+        self.x = 0.0;
+        self.y = 0.0;
     }
 }
 
+pub struct KeyboardState {
+    pressed_keys: HashSet<VirtualKeyCode>
+}
 
+impl Default for KeyboardState {
+    fn default() -> Self {
+        KeyboardState::new()
+    }
+}
 
-pub fn process_raw_input<T>(event: &Event<T>) -> Option<Command> {
-    match event {
-        Event::WindowEvent { event: window_event, .. } => {
-            match window_event {
-                WindowEvent::KeyboardInput {
-                    input:
-                    KeyboardInput {
-                        virtual_keycode: Some(VirtualKeyCode::Escape),
-                        ..
-                    },
-                    ..
-                } => Some(Command::Close),
-                WindowEvent::CloseRequested => Some(Command::Close),
-                WindowEvent::KeyboardInput {
-                    input:
-                    KeyboardInput {
-                        virtual_keycode: Some(VirtualKeyCode::Left),
-                        ..
-                    },
-                    ..
-                } => Some(Command::MoveCmd(MoveCommand::Left)),
-                WindowEvent::KeyboardInput {
-                    input:
-                    KeyboardInput {
-                        virtual_keycode: Some(VirtualKeyCode::Right),
-                        ..
-                    },
-                    ..
-                } => Some(Command::MoveCmd(MoveCommand::Right)),
-                WindowEvent::KeyboardInput {
-                    input:
-                    KeyboardInput {
-                        virtual_keycode: Some(VirtualKeyCode::Up),
-                        state: ElementState::Pressed,
-                        ..
-                    },
-                    ..
-                } => Some(Command::MoveCmd(MoveCommand::Forward)),
-                WindowEvent::KeyboardInput {
-                    input:
-                    KeyboardInput {
-                        virtual_keycode: Some(VirtualKeyCode::Down),
-                        state: ElementState::Pressed,
-                        ..
-                    },
-                    ..
-                } => Some(Command::MoveCmd(MoveCommand::Back)),
-                _ => None,
-            }
-        },
-        Event::DeviceEvent { event: device_event, .. } => {
-            match device_event {
-                DeviceEvent::MouseMotion { delta } => {
-                    Some(Command::MoveCmd(MoveCommand::Look(delta.0, delta.1)))
-                },
-                DeviceEvent::Key(keyboard_input) => {
-                    match keyboard_input {
-                        KeyboardInput {
-                            virtual_keycode: Some(VirtualKeyCode::Up),
-                            state: ElementState::Pressed,
-                            ..
-                        } => Some(Command::MoveCmd(MoveCommand::Forward)),
-                        _ => None,
-                    }
-                }
-                _ => None,
-            }
-        },
-        _ => None,
+impl KeyboardState {
+    pub fn new() -> Self {
+        KeyboardState {
+            pressed_keys: HashSet::with_capacity(256)
+        }
+    }
+    pub fn set_key(&mut self, key: VirtualKeyCode, pressed: bool) {
+        if pressed {
+            let _ = self.pressed_keys.insert(key);
+        } else {
+            let _ = self.pressed_keys.remove(&key);
+        }
+    }
+    pub fn is_key_pressed(&self, key: VirtualKeyCode) -> bool {
+        self.pressed_keys.contains(&key)
+    }
+    pub fn process_device_input(&mut self, event: KeyboardInput) {
+        match event {
+            KeyboardInput {
+                virtual_keycode: Some(key),
+                state: ElementState::Pressed,
+                ..
+            } => self.set_key(key, true),
+            KeyboardInput {
+                virtual_keycode: Some(key),
+                state: ElementState::Released,
+                ..
+            } => self.set_key(key, false),
+            _ => (),
+        }
     }
 }

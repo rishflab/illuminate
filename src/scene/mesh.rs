@@ -1,5 +1,4 @@
 use nalgebra_glm as glm;
-use crate::input::MoveCommand;
 
 pub struct StaticMeshData {
     pub id: usize,

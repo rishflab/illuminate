@@ -1,5 +1,3 @@
-use crate::input::MoveCommand;
-
 pub struct Camera {
     pub view_matrix: glm::Mat4
 }
