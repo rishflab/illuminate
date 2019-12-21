@@ -95,3 +95,46 @@ impl<'a> System<'a> for FlyingFPSMovement {
             })
     }
 }
+
+
+pub struct TopDownMovement;
+
+impl<'a> System<'a> for TopDownMovement {
+    type SystemData = (
+        Read<'a, KeyboardState>,
+        Read<'a, DeltaTime>,
+        ReadStorage<'a, Player>,
+        WriteStorage<'a, Position>,
+        WriteStorage<'a, Rotation>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (keyboard, delta_time, players, mut positions, mut rotations) = data;
+
+        let move_speed = 10.0;
+        let delta_t = delta_time.0.as_secs_f32();
+        let yaw_rate = 360.0;
+
+        (&players, &mut positions, &mut rotations).join()
+            .for_each(|(_, position, rotation)|{
+                if keyboard.is_key_pressed(VirtualKeyCode::Up) {
+                    let temp: glm::Quat = rotation.0;
+                    let delta = move_speed * delta_t * glm::quat_cross_vec(&temp, &vec3(0.0, 1.0, 0.0));
+                    position.0 = position.0 + (delta);
+                }
+                if keyboard.is_key_pressed(VirtualKeyCode::Down) {
+                    let temp: glm::Quat = rotation.0;
+                    let delta = move_speed * delta_t * glm::quat_cross_vec(&temp, &vec3(0.0, -1.0, 0.0));
+                    position.0 = position.0 + (delta);
+                }
+                if keyboard.is_key_pressed(VirtualKeyCode::Left) {
+                    let yaw: glm::Quat = glm::quat_angle_axis(glm::radians(&vec1(delta_t * yaw_rate)).x, &vec3(0.0, 0.0, 1.0));
+                    rotation.0 = rotation.0 * yaw;
+                }
+                if keyboard.is_key_pressed(VirtualKeyCode::Right) {
+                    let yaw: glm::Quat = glm::quat_angle_axis(glm::radians(&vec1(delta_t * yaw_rate)).x, &vec3(0.0, 0.0, -1.0));
+                    rotation.0 = rotation.0 * yaw;
+                }
+            })
+    }
+}

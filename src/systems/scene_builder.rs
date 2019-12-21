@@ -4,6 +4,7 @@ use crate::scene;
 use specs::prelude::*;
 use nalgebra_glm::{vec3, vec3_to_vec4};
 
+#[derive(Debug)]
 pub struct SceneBuilder;
 
 impl<'a> System<'a> for SceneBuilder {

@@ -12,7 +12,8 @@ layout(binding = 0) buffer restrict readonly Camera {
 };
 
 
-layout(std430, binding = 1) buffer Rays {
+layout(std430,
+binding = 1) buffer Rays {
     Ray rays[];
 };
 

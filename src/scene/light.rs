@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct PointLight {
     pub position: glm::Vec4,
     pub intensity: f32,

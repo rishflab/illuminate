@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Camera {
     pub view_matrix: glm::Mat4
 }

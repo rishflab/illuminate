@@ -19,6 +19,7 @@ pub struct MeshView {
     pub length: u32,
 }
 
+#[derive(Debug)]
 pub struct Scene {
     pub camera: Camera,
     pub lights: Vec<PointLight>,
