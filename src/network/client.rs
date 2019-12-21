@@ -2,8 +2,8 @@ use std::net::UdpSocket;
 use std::io::Result;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use super::message::Message;
 use bincode::serialize;
+use serde::Serialize;
 
 pub struct Client {
     socket: UdpSocket
@@ -17,7 +17,7 @@ impl Client {
         }
     }
 
-    pub fn send(&self, msg: Message, port: u16) -> Result<usize> {
+    pub fn send<T: Serialize>(&self, msg: T, port: u16) -> Result<usize> {
         self.socket.send(&serialize(&msg).unwrap())
     }
 }
