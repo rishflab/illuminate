@@ -9,8 +9,9 @@ use std::io::Read;
 use std::path::Path;
 use crate::renderer::ENTRY_NAME;
 use crate::renderer::core::device::DeviceState;
+use crate::renderer::shaders::vertex_skinner_spirv;
 
-pub struct RayTriangleIntersector<B: Backend> {
+pub struct VertexSkinner<B: Backend> {
     pub shader: B::ShaderModule,
     pub set_layout: B::DescriptorSetLayout,
     pub layout: B::PipelineLayout,
@@ -19,17 +20,12 @@ pub struct RayTriangleIntersector<B: Backend> {
     pub pool: B::DescriptorPool,
 }
 
-impl<B: Backend> RayTriangleIntersector<B> {
+impl<B: Backend> VertexSkinner<B> {
 
 
-    pub unsafe fn write_desc_set(&self,
-                                 device_state: Rc<RefCell<DeviceState<B>>>,
-                                 triangle_buffer: &B::Buffer,
-                                 aabb_buffer: &B::Buffer,
-                                 primary_ray_buffer: &B::Buffer,
-                                 primary_intersection_buffer: &B::Buffer,
-                                 bounce_ray_buffer: &B::Buffer,
-                                 bounce_intersection_buffer: &B::Buffer){
+    pub unsafe fn write_desc_set(&self, device_state: Rc<RefCell<DeviceState<B>>>,
+                                 model_buffer: &B::Buffer, vertex_buffer: &B::Buffer,
+                                 triangle_buffer: &B::Buffer, index_buffer: &B::Buffer){
 
         device_state
             .borrow()
@@ -39,55 +35,37 @@ impl<B: Backend> RayTriangleIntersector<B> {
                     set: &self.desc_set,
                     binding: 0,
                     array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(triangle_buffer, None..None)),
+                    descriptors: Some(pso::Descriptor::Buffer(index_buffer, None..None)),
                 },
                 pso::DescriptorSetWrite {
                     set: &self.desc_set,
                     binding: 1,
                     array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(aabb_buffer, None..None)),
+                    descriptors: Some(pso::Descriptor::Buffer(vertex_buffer, None..None)),
                 },
                 pso::DescriptorSetWrite {
                     set: &self.desc_set,
                     binding: 2,
                     array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(primary_ray_buffer, None..None)),
+                    descriptors: Some(pso::Descriptor::Buffer(triangle_buffer, None..None)),
                 },
                 pso::DescriptorSetWrite {
                     set: &self.desc_set,
                     binding: 3,
                     array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(primary_intersection_buffer, None..None)),
-                },
-                pso::DescriptorSetWrite {
-                    set: &self.desc_set,
-                    binding: 4,
-                    array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(bounce_ray_buffer, None..None)),
-                },
-                pso::DescriptorSetWrite {
-                    set: &self.desc_set,
-                    binding: 5,
-                    array_offset: 0,
-                    descriptors: Some(pso::Descriptor::Buffer(bounce_intersection_buffer, None..None)),
+                    descriptors: Some(pso::Descriptor::Buffer(model_buffer, None..None)),
                 },
             ]);
 
     }
 
-    pub unsafe fn new(device_state: Rc<RefCell<DeviceState<B>>>,) -> Self {
+    pub unsafe fn new(device_state: Rc<RefCell<DeviceState<B>>>) -> Self {
 
         let device = &device_state
             .borrow()
             .device;
 
-        let shader = {
-            let path = Path::new("shaders").join("bounces.comp");
-            let glsl = fs::read_to_string(path.as_path()).unwrap();
-            let file = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute).unwrap();
-            let spirv: Vec<u32> = pso::read_spirv(file).unwrap();
-            device.create_shader_module(&spirv).expect("Could not load shader module")
-        };
+        let shader = device.create_shader_module(&vertex_skinner_spirv()).expect("Could not load shader module");
 
         let set_layout = device.create_descriptor_set_layout(
             &[
@@ -119,38 +97,27 @@ impl<B: Backend> RayTriangleIntersector<B> {
                     stage_flags: pso::ShaderStageFlags::COMPUTE,
                     immutable_samplers: false,
                 },
-                pso::DescriptorSetLayoutBinding {
-                    binding: 4,
-                    ty: pso::DescriptorType::StorageBuffer,
-                    count: 1,
-                    stage_flags: pso::ShaderStageFlags::COMPUTE,
-                    immutable_samplers: false,
-                },
-                pso::DescriptorSetLayoutBinding {
-                    binding: 5,
-                    ty: pso::DescriptorType::StorageBuffer,
-                    count: 1,
-                    stage_flags: pso::ShaderStageFlags::COMPUTE,
-                    immutable_samplers: false,
-                },
             ],
             &[],
         ).expect("Camera ray set layout creation failed");
 
         let mut pool = device.create_descriptor_pool(
-            6,
+            4,
             &[
                 pso::DescriptorRangeDesc {
                     ty: pso::DescriptorType::StorageBuffer,
-                    count: 6,
+                    count: 4,
                 },
             ],
             pso::DescriptorPoolCreateFlags::empty(),
         ).expect("Camera ray descriptor pool creation failed");
 
-        let desc_set = pool.allocate_set(&set_layout).expect("Camera ray set allocation failed");
 
-        let layout = device.create_pipeline_layout(vec![&set_layout], &[])
+        let desc_set = pool.allocate_set(&set_layout).expect("Vertex skinner set allocation failed");
+
+        let push_constants = vec![(pso::ShaderStageFlags::COMPUTE, 0..8)];
+
+        let layout = device.create_pipeline_layout(Some(&set_layout), push_constants)
             .expect("Camera ray pipeline layout creation failed");
 
         let pipeline = {
@@ -164,10 +131,12 @@ impl<B: Backend> RayTriangleIntersector<B> {
                 shader_entry,
                 &layout,
             );
-            device.create_compute_pipeline(&pipeline_desc, None).expect("Could not create ray triangle intersector pipeline")
+
+            device.create_compute_pipeline(&pipeline_desc, None)
+                .expect("Could not create vertex skinner pipeline")
         };
 
-        RayTriangleIntersector {
+        VertexSkinner {
             shader,
             set_layout,
             pool,

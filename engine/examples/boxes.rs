@@ -1,16 +1,16 @@
-extern crate blackhole;
+extern crate engine;
 
-use blackhole::renderer::pathtracer::Pathtracer;
-use blackhole::window::WindowState;
-use blackhole::renderer::core::backend::{create_backend};
-use blackhole::scene::{Scene};
+use engine::renderer::pathtracer::Pathtracer;
+use engine::window::WindowState;
+use engine::renderer::core::backend::{create_backend};
+use engine::scene::{Scene};
 use specs::prelude::*;
-use blackhole::asset::{load_gltf, MeshData};
-use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
-use blackhole::scene;
-use blackhole::window::DIMS;
-use blackhole::components::*;
-use blackhole::systems::scene_builder::SceneBuilder;
+use engine::asset::{load_gltf, MeshData};
+use engine::scene::mesh::{StaticMeshData, MeshInstance};
+use engine::scene;
+use engine::window::DIMS;
+use engine::components::*;
+use engine::systems::scene_builder::SceneBuilder;
 use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at, quat_yaw, quat_identity};
 use nalgebra_glm as glm;
 
@@ -18,7 +18,7 @@ fn main() {
     env_logger::init();
 
     let asset_folder = "assets";
-    let gltf = load_gltf(asset_folder, "untitled.gltf")
+    let gltf = load_gltf(asset_folder, "cube.gltf")
         .expect("failed to load gltf");
 
     let event_loop = winit::event_loop::EventLoop::new();
@@ -40,6 +40,9 @@ fn main() {
         vertices: mesh_data.vertices.clone(),
     };
 
+    let mut scene = Scene::default();
+    scene.mesh_data.push(cube_mesh);
+
     let mut world = World::new();
 
     let mut init = DispatcherBuilder::new()
@@ -54,7 +57,7 @@ fn main() {
 
     dispatcher.setup(&mut world);
 
-    world.insert(Scene::default());
+    world.insert(scene);
 
     let floor = world.create_entity()
         .with(StaticMesh(0))

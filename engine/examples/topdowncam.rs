@@ -1,22 +1,22 @@
-extern crate blackhole;
+extern crate engine;
 
-use blackhole::renderer::pathtracer::Pathtracer;
-use blackhole::window::WindowState;
-use blackhole::renderer::core::backend::{create_backend};
-use blackhole::input::{KeyboardState, MouseTravel};
-use blackhole::scene::{Scene};
+use engine::renderer::pathtracer::Pathtracer;
+use engine::window::WindowState;
+use engine::renderer::core::backend::{create_backend};
+use engine::input::{KeyboardState};
+use engine::scene::{Scene};
 use specs::prelude::*;
-use blackhole::asset::{load_gltf, MeshData};
-use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
-use blackhole::scene;
-use blackhole::components::*;
-use blackhole::resources::*;
-use blackhole::window::DIMS;
-use blackhole::systems::player_movement::FlyingFPSMovement;
-use blackhole::systems::scene_builder::SceneBuilder;
+use engine::asset::{load_gltf, MeshData};
+use engine::scene::mesh::{StaticMeshData, MeshInstance};
+use engine::scene;
+use engine::components::*;
+use engine::resources::*;
+use engine::window::DIMS;
+use engine::systems::player_movement::TopDownMovement;
+use engine::systems::scene_builder::SceneBuilder;
 use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at, quat_yaw, quat_identity};
 use nalgebra_glm as glm;
-use blackhole::resources::DeltaTime;
+use engine::resources::DeltaTime;
 use std::time::Instant;
 use std::{thread, time};
 use winit::platform::desktop::EventLoopExtDesktop;
@@ -37,7 +37,7 @@ fn main() {
     let backend = create_backend(window_builder, &event_loop);
 
     let asset_folder = "assets";
-    let gltf = load_gltf(asset_folder, "untitled.gltf")
+    let gltf = load_gltf(asset_folder, "cube.gltf")
         .expect("failed to load gltf");
 
     let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
@@ -48,6 +48,9 @@ fn main() {
         vertices: mesh_data.vertices.clone(),
     };
 
+    let mut scene = Scene::default();
+    scene.mesh_data.push(cube_mesh);
+
     let mut world = World::new();
 
     let mut init = DispatcherBuilder::new()
@@ -57,34 +60,33 @@ fn main() {
     init.setup(&mut world);
 
     let mut dispatcher = DispatcherBuilder::new()
-        .with(FlyingFPSMovement, "player_movement", &[])
-        .with(SceneBuilder, "scene_builder", &["player_movement"])
+        .with(TopDownMovement, "player_movement", &[])
+        .with(SceneBuilder, "scene_builder", &[])
         .build();
 
     dispatcher.setup(&mut world);
 
-    world.insert(Scene::default());
+    world.insert(scene);
     world.insert(KeyboardState::default());
-    world.insert(MouseTravel::default());
     world.insert(DeltaTime::default());
 
-    let floor = world.create_entity()
+    let player = world.create_entity()
         .with(StaticMesh(0))
         .with(Position(vec3(0.0, 0.0, 0.0)))
-        .with(Rotation(quat_identity()))
-        .with(Scale(glm::vec3(10.0, 1.0, 10.0)))
+        .with(Rotation(quat_look_at(&vec3(0.0, 0.0, 1.0), &vec3(0.0, 1.0, 0.0))))
+        .with(Scale(glm::vec3(1.0, 3.0, 0.2)))
+        .with(Player)
         .build();
 
-    let player = world.create_entity()
-        .with(Position(vec3(0.0, 2.0, 9.0)))
-        .with(Rotation(quat_look_at(&vec3(0.0, 0.0, -1.0), &vec3(0.0, 1.0, 0.0))))
-        .with(Player)
+    let camera = world.create_entity()
+        .with(Position(vec3(0.0, 4.0, -20.0)))
+        .with(Rotation(quat_look_at(&vec3(0.0, 0.0, 1.0), &vec3(0.0, 1.0, 0.0))))
         .with(Camera)
         .build();
 
     let light = world.create_entity()
-        .with(PointLight(60.0))
-        .with(Position(vec3(1.5, 7.0, 4.0)))
+        .with(PointLight(560.0))
+        .with(Position(vec3(1.5, 3.0, -15.0)))
         .build();
 
     init.dispatch(&world);
@@ -116,7 +118,9 @@ fn main() {
                     winit::event::WindowEvent::RedrawRequested => {
                         println!("RedrawRequested");
                         start = Instant::now();
-                        dispatcher.dispatch(&world);
+                        //
+                        //
+                         dispatcher.dispatch(&world);
                         renderer.render(&world.fetch::<Scene>());
                         {
                             let duration = start.elapsed();
@@ -131,10 +135,6 @@ fn main() {
             }
             winit::event::Event::DeviceEvent { event,  .. } => {
                 match event {
-                    DeviceEvent::MouseMotion { delta } => {
-                        let mut mouse_travel = world.write_resource::<MouseTravel>();
-                        mouse_travel.add(delta);
-                    },
                     DeviceEvent::Key(keyboard_input) => {
                         let mut keyboard_state = world.write_resource::<KeyboardState>();
                         keyboard_state.process_device_input(keyboard_input);

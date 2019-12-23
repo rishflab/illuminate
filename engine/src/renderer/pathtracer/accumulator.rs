@@ -9,6 +9,7 @@ use std::io::Read;
 use std::path::Path;
 use crate::renderer::ENTRY_NAME;
 use crate::renderer::core::device::DeviceState;
+use crate::renderer::shaders::accumulator_spirv;
 
 pub struct Accumulator<B: Backend> {
     pub shader: B::ShaderModule,
@@ -115,13 +116,7 @@ impl<B: Backend> Accumulator<B> {
             .borrow()
             .device;
 
-        let shader = {
-            let path = Path::new("shaders").join("accumulate_intersections.comp");
-            let glsl = fs::read_to_string(path.as_path()).unwrap();
-            let file = glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Compute).unwrap();
-            let spirv: Vec<u32> = pso::read_spirv(file).unwrap();
-            device.create_shader_module(&spirv).expect("Could not load shader module")
-        };
+        let shader = device.create_shader_module(&accumulator_spirv()).expect("Could not load shader module");
 
         let set_layout = device.create_descriptor_set_layout(
             &[

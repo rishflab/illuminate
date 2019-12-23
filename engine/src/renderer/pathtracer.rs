@@ -86,11 +86,9 @@ impl<B: Backend> Pathtracer<B> {
 
         let vertex_skinner = VertexSkinner::new(Rc::clone(&device));
 
-        //println!("Created pipelines");
-
         let aabb_calculator = AabbCalculator::new(Rc::clone(&device));
 
-
+        println!("Created pipelines");
 
         println!("memory types: {:?}", &backend.adapter.memory_types);
 

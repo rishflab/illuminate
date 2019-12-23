@@ -116,23 +116,10 @@ impl Scene {
 
 impl Default for Scene {
     fn default() -> Self {
-
-        let asset_folder = "assets";
-        let gltf = load_gltf(asset_folder, "untitled.gltf")
-                .expect("failed to load gltf");
-
-        let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
-
-        let cube_mesh = StaticMeshData {
-            id: 0,
-            indices: mesh_data.indices.clone(),
-            vertices: mesh_data.vertices.clone(),
-        };
-
         Scene {
             camera: Camera::new(vec3(0.0, 0.0, 0.0), quat_identity()),
             lights: vec![],
-            mesh_data: vec![cube_mesh],
+            mesh_data: vec![],
             mesh_instances: Vec::new()
         }
     }

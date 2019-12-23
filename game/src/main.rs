@@ -1,22 +1,20 @@
-extern crate blackhole;
-
-use blackhole::renderer::pathtracer::Pathtracer;
-use blackhole::window::WindowState;
-use blackhole::renderer::core::backend::{create_backend};
-use blackhole::input::{KeyboardState};
-use blackhole::scene::{Scene};
+use engine::renderer::pathtracer::Pathtracer;
+use engine::window::WindowState;
+use engine::renderer::core::backend::{create_backend};
+use engine::input::{KeyboardState};
+use engine::scene::{Scene};
 use specs::prelude::*;
-use blackhole::asset::{load_gltf, MeshData};
-use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
-use blackhole::scene;
-use blackhole::components::*;
-use blackhole::resources::*;
-use blackhole::window::DIMS;
-use blackhole::systems::player_movement::TopDownMovement;
-use blackhole::systems::scene_builder::SceneBuilder;
+use engine::asset::{load_gltf, MeshData};
+use engine::scene::mesh::{StaticMeshData, MeshInstance};
+use engine::scene;
+use engine::components::*;
+use engine::resources::*;
+use engine::window::DIMS;
+use engine::systems::player_movement::TopDownMovement;
+use engine::systems::scene_builder::SceneBuilder;
 use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at, quat_yaw, quat_identity};
 use nalgebra_glm as glm;
-use blackhole::resources::DeltaTime;
+use engine::resources::DeltaTime;
 use std::time::Instant;
 use std::{thread, time};
 use winit::platform::desktop::EventLoopExtDesktop;
@@ -32,12 +30,12 @@ fn main() {
             DIMS.width as _,
             DIMS.height as _,
         ))
-        .with_title("colour-uniform".to_string());
+        .with_title("Blackhole".to_string());
 
     let backend = create_backend(window_builder, &event_loop);
 
     let asset_folder = "assets";
-    let gltf = load_gltf(asset_folder, "untitled.gltf")
+    let gltf = load_gltf(asset_folder, "cube.gltf")
         .expect("failed to load gltf");
 
     let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
@@ -49,6 +47,9 @@ fn main() {
     };
 
     let mut world = World::new();
+
+    let mut scene = Scene::default();
+    scene.mesh_data.push(cube_mesh);
 
     let mut init = DispatcherBuilder::new()
         .with(SceneBuilder, "scene_builder", &[])
@@ -63,7 +64,7 @@ fn main() {
 
     dispatcher.setup(&mut world);
 
-    world.insert(Scene::default());
+    world.insert(scene);
     world.insert(KeyboardState::default());
     world.insert(DeltaTime::default());
 
@@ -117,7 +118,7 @@ fn main() {
                         start = Instant::now();
                         //
                         //
-                         dispatcher.dispatch(&world);
+                        dispatcher.dispatch(&world);
                         renderer.render(&world.fetch::<Scene>());
                         {
                             let duration = start.elapsed();

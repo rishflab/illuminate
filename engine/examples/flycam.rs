@@ -1,22 +1,22 @@
-extern crate blackhole;
+extern crate engine;
 
-use blackhole::renderer::pathtracer::Pathtracer;
-use blackhole::window::WindowState;
-use blackhole::renderer::core::backend::{create_backend};
-use blackhole::input::{KeyboardState, MouseTravel};
-use blackhole::scene::{Scene};
+use engine::renderer::pathtracer::Pathtracer;
+use engine::window::WindowState;
+use engine::renderer::core::backend::{create_backend};
+use engine::input::{KeyboardState, MouseTravel};
+use engine::scene::{Scene};
 use specs::prelude::*;
-use blackhole::asset::{load_gltf, MeshData};
-use blackhole::scene::mesh::{StaticMeshData, MeshInstance};
-use blackhole::scene;
-use blackhole::components::*;
-use blackhole::resources::*;
-use blackhole::window::DIMS;
-use blackhole::systems::player_movement::FlyingMovement;
-use blackhole::systems::scene_builder::SceneBuilder;
+use engine::asset::{load_gltf, MeshData};
+use engine::scene::mesh::{StaticMeshData, MeshInstance};
+use engine::scene;
+use engine::components::*;
+use engine::resources::*;
+use engine::window::DIMS;
+use engine::systems::player_movement::FlyingMovement;
+use engine::systems::scene_builder::SceneBuilder;
 use nalgebra_glm::{vec3, vec3_to_vec4, Quat, quat, quat_angle_axis, quat_look_at, quat_yaw, quat_identity};
 use nalgebra_glm as glm;
-use blackhole::resources::DeltaTime;
+use engine::resources::DeltaTime;
 use std::time::Instant;
 use std::{thread, time};
 use winit::platform::desktop::EventLoopExtDesktop;
@@ -37,7 +37,7 @@ fn main() {
     let backend = create_backend(window_builder, &event_loop);
 
     let asset_folder = "assets";
-    let gltf = load_gltf(asset_folder, "untitled.gltf")
+    let gltf = load_gltf(asset_folder, "cube.gltf")
         .expect("failed to load gltf");
 
     let mesh_data = MeshData::from_gltf(&gltf, asset_folder);
@@ -47,6 +47,9 @@ fn main() {
         indices: mesh_data.indices.clone(),
         vertices: mesh_data.vertices.clone(),
     };
+
+    let mut scene = Scene::default();
+    scene.mesh_data.push(cube_mesh);
 
     let mut world = World::new();
 
@@ -63,7 +66,7 @@ fn main() {
 
     dispatcher.setup(&mut world);
 
-    world.insert(Scene::default());
+    world.insert(scene);
     world.insert(KeyboardState::default());
     world.insert(MouseTravel::default());
     world.insert(DeltaTime::default());

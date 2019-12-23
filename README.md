@@ -1,2 +1,2 @@
 # Blackhole
-Space ship battle royale built with a networked entity-component-system architecture
+Space ship battle royale built and a realtime GPU pathtracing game engine
