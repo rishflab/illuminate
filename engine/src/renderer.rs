@@ -1,6 +1,7 @@
 pub mod core;
 pub mod pathtracer;
 pub mod shaders;
+pub mod cpu;
 
 use self::core::backend::BackendState;
 use crate::window::WindowState;
