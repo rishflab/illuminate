@@ -1,5 +1,5 @@
 use nalgebra_glm as glm;
-use glm::{Vec3, vec3, vec2, vec4, normalize, cross, dot, vec3_to_vec4};
+use glm::{Vec3, vec3, vec2, vec4, normalize, cross, dot, vec3_to_vec4, Quat, quat_to_mat3};
 
 #[derive(Debug)]
 pub struct BBox {
@@ -103,6 +103,14 @@ pub fn generate_rays(resolution: (u32, u32)) -> Vec<Ray> {
     rays
 }
 
+pub fn transform_rays(rays: &mut Vec<Ray>, position: &Vec3, rotation: &Quat) {
+    let r = glm::quat_to_mat3(&rotation);
+    for mut ray in rays {
+        ray.direction = r * ray.direction;
+        ray.origin = position.clone();
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -116,6 +124,7 @@ mod tests {
             max: vec3(1.0, 1.0, 1.0),
         };
         let ray = Ray {
+            index: (0, 0),
             origin: vec3(0.0, 0.0, -1.0),
             direction: vec3(1.0, 1.0, 1.0),
         };
@@ -129,6 +138,7 @@ mod tests {
             max: vec3(1.0, 1.0, 1.0),
         };
         let ray = Ray {
+            index: (0, 0),
             origin: vec3(0.0, 0.0, -1.0),
             direction: vec3(-1.0, 1.0, 1.0),
         };

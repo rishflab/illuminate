@@ -13,15 +13,22 @@ use image::ColorType::RGB;
 
 fn main() {
 
-    let width = 800;
-    let height = 800;
+    let width = 400;
+    let height = 400;
 
-    let rays = generate_rays((width, height));
+    let up_vec = vec3(0.0, 1.0, 0.0);
+
+    let cam_pos = vec3(0.0, 4.0, 0.0);
+    let cam_rot = quat_look_at(&(vec3(0.0, 0.0, -3.0) + cam_pos),&up_vec);
+
+    let mut rays = generate_rays((width, height));
+
+    transform_rays(&mut rays, &cam_pos, &cam_rot);
 
     let triangle = Triangle (
-        vec3(-0.5, 0.0, -5.0),
-        vec3(0.5, 0.0, -5.0),
-        vec3(0.0, 1.0, -5.0)
+        vec3(0.0, 0.0, -3.0),
+        vec3(1.0, 0.0, -3.0),
+        vec3(0.0, 1.0, -3.0)
     );
 
     let mut img: RgbImage = ImageBuffer::new(width, height);
@@ -36,5 +43,4 @@ fn main() {
     }
 
     img.save("logs/render.png").unwrap();
-
 }
