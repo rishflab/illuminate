@@ -1,5 +1,7 @@
 use nalgebra_glm as glm;
-use glm::{Vec3, vec3, vec2, vec4, normalize, cross, dot, vec3_to_vec4, Quat, quat_to_mat3};
+use glm::{Vec3, vec3, vec2, vec4, normalize, cross, dot, vec3_to_vec4, Quat, quat_to_mat3, quat_look_at, distance, reflect_vec};
+use crate::scene::light::PointLight;
+use rayon::prelude::*;
 
 #[derive(Debug)]
 pub struct BBox {
@@ -7,7 +9,7 @@ pub struct BBox {
     pub max: glm::Vec3,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Ray {
     pub index: (u32, u32),
     pub origin: glm::Vec3,
@@ -19,23 +21,68 @@ pub struct Triangle(pub Vec3, pub Vec3, pub Vec3);
 
 #[derive(Debug)]
 pub struct Intersection {
+    pub index: (u32, u32),
     pub position: Vec3,
     pub normal: Vec3,
     pub edge: Vec3,
     pub a: f32,
 }
 
-fn comp_div3(a: glm::Vec3, b: glm::Vec3) -> glm::Vec3 {
-    glm::vec3(a.x/b.x, a.y/b.y, a.z/b.z)
+impl Intersection {
+    pub fn new() -> Intersection {
+        Intersection {
+            index: (0, 0),
+            position: vec3(0.0, 0.0, 0.0),
+            normal: vec3(0.0, 0.0, 0.0),
+            edge: vec3(0.0, 0.0, 0.0),
+            a: -1.0,
+        }
+    }
 }
 
-fn comp_div4(a: glm::Vec4, b: glm::Vec4) -> glm::Vec4 {
-    glm::vec4(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w)
+
+pub fn trace_ray(camera_ray: &Ray, tris: &[Triangle], lights: &[PointLight]) -> f32 {
+
+    let mut intersections = vec![];
+
+    let mut ray = camera_ray.clone();
+
+    [0..2].iter().for_each(|_|{
+        let intersection = find_closest_intersection(&ray, tris);
+        ray = reflection_ray(&intersection, &ray);
+        intersections.push(intersection);
+    });
+
+    let mut shade = 0.0;
+
+    for intersection in intersections.iter().rev() {
+        if intersection.a > -1.0 {
+            let shadow_ray = generate_shadow_ray(intersection, &lights[0]);
+            if !intersects_any(&shadow_ray, tris) {
+                shade += calculate_diffuse_shade(intersection, &lights[0], &shadow_ray);
+            }
+        }
+    }
+
+    shade
 }
 
-fn comp_div2(a: glm::Vec2, b: glm::Vec2) -> glm::Vec2 {
-    glm::vec2(a.x/b.x, a.y/b.y)
+pub fn reflection_ray(intersection: &Intersection, ray: &Ray) -> Ray {
+    Ray {
+        index: ray.index,
+        origin: intersection.position,
+        direction: reflect_vec(&ray.direction, &intersection.normal),
+    }
 }
+
+pub fn calculate_diffuse_shade(intersection: &Intersection, light: &PointLight, shadow_ray: &Ray) -> f32 {
+    let angle = dot(&intersection.normal, &(-1.0 * shadow_ray.direction)
+
+    );
+    let distance = distance(&intersection.position, &light.position.xyz());
+    light.intensity * (1.0/(distance * distance)) * angle
+}
+
 
 pub fn intersect_box(ray: Ray, aabb: BBox) -> bool {
     let tMin = comp_div3(aabb.min - ray.origin, ray.direction);
@@ -47,7 +94,7 @@ pub fn intersect_box(ray: Ray, aabb: BBox) -> bool {
     tFar >= tNear
 }
 
-pub fn intersect_triangle(ray: &Ray, tri: &Triangle) -> Intersection {
+pub fn calculate_intersection(ray: &Ray, tri: &Triangle) -> Intersection {
     let v1 = tri.0;
     let v2 = tri.1;
     let v3 = tri.2;
@@ -65,6 +112,7 @@ pub fn intersect_triangle(ray: &Ray, tri: &Triangle) -> Intersection {
     let normal = normalize(&e2.cross(&e1));
     if b1 < 0.0 || b1 > 1.0 || b2 < 0.0 || (b1 + b2) > 1.0 || temp <= 0.0 || det < 0.0 {
         Intersection {
+            index: ray.index,
             position: vec3(position.x, position.y, position.z),
             normal: vec3(normal.x, normal.y, normal.z),
             edge: e2,
@@ -72,6 +120,7 @@ pub fn intersect_triangle(ray: &Ray, tri: &Triangle) -> Intersection {
         }
     } else {
         Intersection {
+            index: ray.index,
             position: vec3(position.x, position.y, position.z),
             normal: vec3(normal.x, normal.y, normal.z),
             edge: e2,
@@ -80,7 +129,53 @@ pub fn intersect_triangle(ray: &Ray, tri: &Triangle) -> Intersection {
     }
 }
 
-pub fn generate_rays(resolution: (u32, u32)) -> Vec<Ray> {
+pub fn intersects(ray: &Ray, tri: &Triangle) -> bool {
+    if calculate_intersection(ray, tri).a == -1.0 {
+        false
+    } else {
+        true
+    }
+}
+
+pub fn find_closest_intersection(ray: &Ray, tris: &[Triangle]) -> Intersection {
+    let intersections: Vec<Intersection> = tris.iter()
+        .map(|tri|{
+            calculate_intersection(ray, tri)
+        }).collect();
+
+    let mut closest_intersection = Intersection::new();
+
+    for intersection in intersections {
+        if intersection.a != -1.0 && closest_intersection.a == -1.0 {
+            closest_intersection = intersection;
+        } else if intersection.a != -1.0 && closest_intersection.a != -1.0 {
+            let old_dist = distance(&closest_intersection.position, &ray.origin);
+            let new_dist = distance(&intersection.position, &ray.origin);
+            if new_dist < old_dist {
+               closest_intersection = intersection;
+            }
+        }
+    }
+    closest_intersection
+}
+
+pub fn intersects_any(ray: &Ray, tris: &[Triangle]) -> bool {
+    let intersections: Vec<bool> = tris.iter()
+        .map(|tri|{
+            intersects(ray, tri)
+        }).collect();
+
+    let mut result = false;
+
+    for intersection in intersections.iter() {
+        if *intersection {
+            result = true
+        }
+    }
+    result
+}
+
+pub fn generate_camera_rays(resolution: (u32, u32)) -> Vec<Ray> {
     let mut rays = vec![];
     let aspect_ratio = resolution.0 as f32 / resolution.1 as f32;
     for i in 0..resolution.0 {
@@ -103,12 +198,36 @@ pub fn generate_rays(resolution: (u32, u32)) -> Vec<Ray> {
     rays
 }
 
-pub fn transform_rays(rays: &mut Vec<Ray>, position: &Vec3, rotation: &Quat) {
-    let r = glm::quat_to_mat3(&rotation);
-    for mut ray in rays {
-        ray.direction = r * ray.direction;
-        ray.origin = position.clone();
+pub fn generate_shadow_ray(intersection: &Intersection, light: &PointLight) -> Ray {
+    Ray {
+        index: intersection.index,
+        origin: intersection.position,
+        direction: normalize(&(light.position.xyz() - intersection.position)),
     }
+}
+
+pub fn transform_camera_rays(rays: Vec<Ray>, position: &Vec3, rotation: &Quat) -> Vec<Ray> {
+    let r = glm::quat_to_mat3(&rotation);
+    rays.par_iter()
+        .map(|ray|{
+            Ray{
+                index: ray.index,
+                origin: position.clone(),
+                direction: r * ray.direction,
+            }
+    }).collect()
+}
+
+fn comp_div3(a: glm::Vec3, b: glm::Vec3) -> glm::Vec3 {
+    glm::vec3(a.x/b.x, a.y/b.y, a.z/b.z)
+}
+
+fn comp_div4(a: glm::Vec4, b: glm::Vec4) -> glm::Vec4 {
+    glm::vec4(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w)
+}
+
+fn comp_div2(a: glm::Vec2, b: glm::Vec2) -> glm::Vec2 {
+    glm::vec2(a.x/b.x, a.y/b.y)
 }
 
 #[cfg(test)]
