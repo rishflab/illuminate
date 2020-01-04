@@ -51,7 +51,7 @@ fn main() {
         img.put_pixel(x, y, image::Rgb([shade, shade, shade]));
     }
 
-    img.save("logs/render2.png").unwrap();
+    img.save("logs/render.png").unwrap();
 }
 
 fn boxes_scene() -> Vec<Triangle> {

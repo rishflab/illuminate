@@ -243,7 +243,7 @@ mod tests {
             origin: vec3(0.0, 0.0, -1.0),
             direction: vec3(1.0, 1.0, 1.0),
         };
-        assert!(intersect_box(ray, bbox))
+        assert!(intersect_box(&ray, &bbox))
     }
 
     #[test]
@@ -257,7 +257,7 @@ mod tests {
             origin: vec3(0.0, 0.0, -1.0),
             direction: vec3(-1.0, 1.0, 1.0),
         };
-        assert!(!intersect_box(ray, bbox))
+        assert!(!intersect_box(&ray, &bbox))
     }
 
     #[test]
