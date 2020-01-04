@@ -91,9 +91,9 @@ pub fn calculate_shade(intersection: &Intersection, light: &PointLight, shadow_r
 }
 
 
-pub fn intersect_box(ray: Ray, aabb: BBox) -> bool {
-    let tMin = comp_div3(aabb.min - ray.origin, ray.direction);
-    let tMax = comp_div3(aabb.max - ray.origin, ray.direction);
+pub fn intersect_box(ray: &Ray, aabb: &BBox) -> bool {
+    let tMin = (aabb.min - ray.origin).component_div(&ray.direction);
+    let tMax = (aabb.max - ray.origin).component_div(&ray.direction);
     let t1 = glm::min2(&tMin, &tMax);
     let t2 = glm::max2(&tMin, &tMax);
     let tNear = glm::max(&glm::max(&glm::vec1(t1.x), t1.y), t1.z);
@@ -190,7 +190,7 @@ pub fn generate_camera_rays(resolution: (u32, u32)) -> Vec<Ray> {
         for j in 0..resolution.1 {
             let mut cam_origin = vec3(0.0, 0.0, 0.0);
             let raster_coord = vec2(i as f32, j as f32);
-            let norm_coords = comp_div2(raster_coord, vec2(resolution.0 as f32, resolution.1 as f32));
+            let norm_coords = raster_coord.component_div(&vec2(resolution.0 as f32, resolution.1 as f32));
             let offset = vec2(aspect_ratio * 2.0 * norm_coords.x, -2.0 * norm_coords.y);
             let screen_coord = vec2(aspect_ratio*-1.0, 1.0) + offset;
             let screen_ray_intersection = vec3(screen_coord.x, screen_coord.y, -1.0);
@@ -224,18 +224,6 @@ pub fn transform_camera_rays(rays: Vec<Ray>, position: &Vec3, rotation: &Quat) -
                 direction: r * ray.direction,
             }
     }).collect()
-}
-
-fn comp_div3(a: glm::Vec3, b: glm::Vec3) -> glm::Vec3 {
-    glm::vec3(a.x/b.x, a.y/b.y, a.z/b.z)
-}
-
-fn comp_div4(a: glm::Vec4, b: glm::Vec4) -> glm::Vec4 {
-    glm::vec4(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w)
-}
-
-fn comp_div2(a: glm::Vec2, b: glm::Vec2) -> glm::Vec2 {
-    glm::vec2(a.x/b.x, a.y/b.y)
 }
 
 #[cfg(test)]
