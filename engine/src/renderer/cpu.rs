@@ -14,6 +14,7 @@ pub struct Ray {
     pub index: (u32, u32),
     pub origin: glm::Vec3,
     pub direction: glm::Vec3,
+    pub length: f32,
 }
 
 #[derive(Debug)]
@@ -25,7 +26,8 @@ pub struct Intersection {
     pub position: Vec3,
     pub normal: Vec3,
     pub edge: Vec3,
-    pub a: f32,
+    pub distance: f32,
+    pub hit: bool,
 }
 
 impl Intersection {
@@ -35,7 +37,8 @@ impl Intersection {
             position: vec3(0.0, 0.0, 0.0),
             normal: vec3(0.0, 0.0, 0.0),
             edge: vec3(0.0, 0.0, 0.0),
-            a: -1.0,
+            distance: -1.0,
+            hit: false,
         }
     }
 }
@@ -51,18 +54,17 @@ pub fn trace_ray(camera_ray: &Ray, tris: &[Triangle], lights: &[PointLight]) -> 
         let intersection = find_closest_intersection(&ray, tris);
         ray = reflection_ray(&intersection, &ray);
         intersections.push(intersection);
-        //println!("{:?}", i);
     };
 
     let mut shade = 0.0;
 
     for intersection in intersections.iter().rev() {
-        if intersection.a > 0.0 {
+        if intersection.distance > 0.0 {
             let shadow_ray = generate_shadow_ray(intersection, &lights[0]);
-            if !intersects_any(&shadow_ray, distance(&intersection.position, &lights[0].position.xyz()), tris) {
+            if !intersects_any(&shadow_ray, tris) {
                 let diffuse =  calculate_shade(intersection, &lights[0], &shadow_ray);
                 shade += diffuse;
-                shade =  shade / ((1.0 + intersection.a) * (1.0 + intersection.a));
+                shade =  shade / ((1.0 + intersection.distance) * (1.0 + intersection.distance));
             }
         }
     }
@@ -80,6 +82,7 @@ pub fn reflection_ray(intersection: &Intersection, incident: &Ray) -> Ray {
         index: incident.index,
         origin: intersection.position,
         direction: reflect_vec(&(incident.direction), &intersection.normal),
+        length: incident.length - intersection.distance,
     }
 }
 
@@ -89,7 +92,6 @@ pub fn calculate_shade(intersection: &Intersection, light: &PointLight, shadow_r
     light.intensity * (1.0/((1.0 + distance) * (1.0 * distance))) * angle.abs()
 
 }
-
 
 pub fn intersect_box(ray: &Ray, aabb: &BBox) -> bool {
     let tMin = (aabb.min - ray.origin).component_div(&ray.direction);
@@ -108,8 +110,7 @@ pub fn calculate_intersection(ray: &Ray, tri: &Triangle) -> Intersection {
     let e1 = v2 - v1;
     let e2 = v3 - v1;
     let s1 = &ray.direction.cross(&e2);
-    let det = dot(&e1, &s1);
-    let invd = 1.0/det;
+    let invd = 1.0 / dot(&s1, &e1);
     let d = ray.origin - v1;
     let b1 = dot(&d, &s1) * invd;
     let s2 = &d.cross(&e1);
@@ -117,13 +118,14 @@ pub fn calculate_intersection(ray: &Ray, tri: &Triangle) -> Intersection {
     let temp = dot(&e2, &s2) * invd;
     let position = ray.origin + (ray.direction * temp);
     let normal = normalize(&e2.cross(&e1));
-    if b1 < 0.0 || b1 > 1.0 || b2 < 0.0 || (b1 + b2) > 1.0 || temp <= 0.0 || det < -0.0 {
+    if b1 < 0.0 || b1 > 1.0 || b2 < 0.0 || (b1 + b2) > 1.0 || temp < 0.001 || temp > ray.length {
         Intersection {
             index: ray.index,
             position: vec3(position.x, position.y, position.z),
             normal: vec3(normal.x, normal.y, normal.z),
             edge: e2,
-            a: -1.0,
+            distance: -1.0,
+            hit: false,
         }
     } else {
         Intersection {
@@ -131,46 +133,38 @@ pub fn calculate_intersection(ray: &Ray, tri: &Triangle) -> Intersection {
             position: vec3(position.x, position.y, position.z),
             normal: vec3(normal.x, normal.y, normal.z),
             edge: e2,
-            a: temp,
+            distance: temp,
+            hit: true,
         }
     }
 }
 
-pub fn intersects(ray: &Ray, tri: &Triangle, dist: f32) -> bool {
-    let intersection = calculate_intersection(ray, tri);
-    if intersection.a < dist && intersection.a > 0.0 {
-        true
-    } else {
-        false
-    }
+pub fn intersects(ray: &Ray, tri: &Triangle) -> bool {
+    calculate_intersection(ray, tri).hit
 }
 
 pub fn find_closest_intersection(ray: &Ray, tris: &[Triangle]) -> Intersection {
     let intersections: Vec<Intersection> = tris.iter()
         .map(|tri|{
             calculate_intersection(ray, tri)
-        }).collect();
+        }).filter(|intersection| intersection.hit == true)
+        .collect();
 
     let mut closest_intersection = Intersection::new();
+    closest_intersection.distance = ray.length;
 
     for intersection in intersections {
-        if intersection.a > 0.0 && closest_intersection.a <= 0.0 {
+        if intersection.distance <= closest_intersection.distance {
             closest_intersection = intersection;
-        } else if intersection.a > 0.0 && closest_intersection.a > 0.0 {
-            let old_dist = closest_intersection.a;
-            let new_dist = intersection.a;
-            if new_dist < old_dist {
-               closest_intersection = intersection;
-            }
         }
     }
     closest_intersection
 }
 
-pub fn intersects_any(ray: &Ray, ray_dist: f32,  tris: &[Triangle]) -> bool {
+pub fn intersects_any(ray: &Ray, tris: &[Triangle]) -> bool {
     let intersections: Vec<bool> = tris.iter()
         .map(|tri|{
-            intersects(ray, tri, ray_dist)
+            intersects(ray, tri)
         }).collect();
 
     let mut result = false;
@@ -183,7 +177,7 @@ pub fn intersects_any(ray: &Ray, ray_dist: f32,  tris: &[Triangle]) -> bool {
     result
 }
 
-pub fn generate_camera_rays(resolution: (u32, u32)) -> Vec<Ray> {
+pub fn generate_camera_rays(resolution: (u32, u32), ray_length: f32) -> Vec<Ray> {
     let mut rays = vec![];
     let aspect_ratio = resolution.0 as f32 / resolution.1 as f32;
     for i in 0..resolution.0 {
@@ -199,6 +193,7 @@ pub fn generate_camera_rays(resolution: (u32, u32)) -> Vec<Ray> {
                 index: (i, j),
                 origin: cam_origin,
                 direction: ray_direction,
+                length: ray_length,
             };
             rays.push(ray)
         }
@@ -211,6 +206,7 @@ pub fn generate_shadow_ray(intersection: &Intersection, light: &PointLight) -> R
         index: intersection.index,
         origin: intersection.position,
         direction: normalize(&(light.position.xyz() - intersection.position)),
+        length: distance(&intersection.position, &light.position.xyz()),
     }
 }
 
@@ -222,6 +218,7 @@ pub fn transform_camera_rays(rays: Vec<Ray>, position: &Vec3, rotation: &Quat) -
                 index: ray.index,
                 origin: position.clone(),
                 direction: r * ray.direction,
+                length: ray.length,
             }
     }).collect()
 }
@@ -242,6 +239,7 @@ mod tests {
             index: (0, 0),
             origin: vec3(0.0, 0.0, -1.0),
             direction: vec3(1.0, 1.0, 1.0),
+            length: 1000.0,
         };
         assert!(intersect_box(&ray, &bbox))
     }
@@ -256,6 +254,7 @@ mod tests {
             index: (0, 0),
             origin: vec3(0.0, 0.0, -1.0),
             direction: vec3(-1.0, 1.0, 1.0),
+            length: 1000.0,
         };
         assert!(!intersect_box(&ray, &bbox))
     }
@@ -266,18 +265,21 @@ mod tests {
             index: (0, 0),
             origin: vec3(0.0, 0.0, 0.0),
             direction: vec3(1.0, 1.0, 0.0),
+            length: 1000.0,
         };
         let reflected = Ray {
             index: (0, 0),
             origin: vec3(1.0, 1.0, 0.0),
             direction: vec3(1.0, -1.0, 0.0),
+            length: 1000.0,
         };
         let intersection = Intersection {
             index: (0, 0),
             position: vec3(1.0, 1.0, 0.0),
             normal: vec3(0.0, -1.0 ,0.0),
             edge: vec3(1.0, 2.0, 0.0),
-            a: 0.0,
+            distance: 0.0,
+            hit: true,
         };
         assert_eq!(reflection_ray(&intersection, &incident), reflected)
     }

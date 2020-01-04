@@ -27,7 +27,7 @@ fn main() {
     let cam_pos = vec3(0.0, 1.5, 5.0);
     let cam_rot = quat_look_at(&(vec3(0.0, 0.0, -20.0) + cam_pos),&up_vec);
 
-    let rays = generate_camera_rays((width, height));
+    let rays = generate_camera_rays((width, height), 1000.0);
 
     let rays = transform_camera_rays(rays, &cam_pos, &cam_rot);
 
