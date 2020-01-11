@@ -1,3 +1,5 @@
+extern crate not_mechanical_engine as engine;
+
 use engine::renderer::pathtracer::Pathtracer;
 use engine::window::WindowState;
 use engine::renderer::core::backend::{create_backend};
@@ -27,10 +29,10 @@ fn main() {
     let window_builder = winit::window::WindowBuilder::new()
         .with_min_inner_size(winit::dpi::LogicalSize::new(1.0, 1.0))
         .with_inner_size(winit::dpi::LogicalSize::new(
-            DIMS.width as _,
-            DIMS.height as _,
+            DIMS.width,
+            DIMS.height,
         ))
-        .with_title("Blackhole".to_string());
+        .with_title("colour-uniform".to_string());
 
     let backend = create_backend(window_builder, &event_loop);
 
@@ -46,10 +48,10 @@ fn main() {
         vertices: mesh_data.vertices.clone(),
     };
 
-    let mut world = World::new();
-
     let mut scene = Scene::default();
     scene.mesh_data.push(cube_mesh);
+
+    let mut world = World::new();
 
     let mut init = DispatcherBuilder::new()
         .with(SceneBuilder, "scene_builder", &[])
@@ -112,25 +114,23 @@ fn main() {
                     }
                     | winit::event::WindowEvent::CloseRequested => {
                         *control_flow = winit::event_loop::ControlFlow::Exit
-                    }
-                    winit::event::WindowEvent::RedrawRequested => {
-                        println!("RedrawRequested");
-                        start = Instant::now();
-                        //
-                        //
-                        dispatcher.dispatch(&world);
-                        renderer.render(&world.fetch::<Scene>());
-                        {
-                            let duration = start.elapsed();
-                            let mut delta_time = world.write_resource::<DeltaTime>();
-                            delta_time.0 = duration;
-                            println!("frame time:{:?}", duration);
-                        }
-                        println!("");
-                    }
+                    },
                     _ => (),
                 }
             }
+            winit::event::Event::RedrawRequested(..)=> {
+                println!("RedrawRequested");
+                start = Instant::now();
+                dispatcher.dispatch(&world);
+                renderer.render(&world.fetch::<Scene>());
+                {
+                    let duration = start.elapsed();
+                    let mut delta_time = world.write_resource::<DeltaTime>();
+                    delta_time.0 = duration;
+                    println!("frame time:{:?}", duration);
+                }
+                println!("");
+            },
             winit::event::Event::DeviceEvent { event,  .. } => {
                 match event {
                     DeviceEvent::Key(keyboard_input) => {
@@ -139,11 +139,11 @@ fn main() {
                     }
                     _ => (),
                 }
-            }
-            winit::event::Event::EventsCleared => {
+            },
+            winit::event::Event::MainEventsCleared => {
                 println!("EventsCleared");
                 renderer.backend.window.request_redraw();
-            }
+            },
             _ => (),
         }
     });

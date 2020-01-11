@@ -24,8 +24,8 @@ impl WindowState {
 
         let wb = WindowBuilder::new()
             .with_inner_size(winit::dpi::LogicalSize::new(
-                DIMS.width as _,
-                DIMS.height as _,
+                DIMS.width,
+                DIMS.height,
             )).with_title("raytracer".to_string());
 
         WindowState {

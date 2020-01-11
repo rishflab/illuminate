@@ -1,4 +1,4 @@
-extern crate engine;
+extern crate not_mechanical_engine as engine;
 extern crate image;
 
 use engine::renderer::cpu::*;
@@ -51,7 +51,7 @@ fn main() {
         img.put_pixel(x, y, image::Rgb([shade, shade, shade]));
     }
 
-    img.save("logs/render.png").unwrap();
+    img.save("target/render.png").unwrap();
 }
 
 fn boxes_scene() -> Vec<Triangle> {
