@@ -1,5 +1,5 @@
-# Not Mechanical Engine
-Not Mechanical Engine is a game engine that features a real-time pathtracing renderer and an entity-component-system
+# Illuminate
+Illuminate is a game engine that features a real-time pathtracing renderer and an entity-component-system
 architecture for cache-optimised multithreaded game logic.
 
 ## Hardware Support
@@ -13,3 +13,4 @@ they are implemented on the GPU for real-time performance.
 ### Confirmed Supported Hardware
 - AMD Radeon RX 570
 - AMD Radeon RX 580
+

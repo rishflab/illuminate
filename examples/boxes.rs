@@ -1,4 +1,4 @@
-extern crate not_mechanical_engine as engine;
+extern crate illuminate as engine;
 
 use engine::renderer::pathtracer::Pathtracer;
 use engine::window::WindowState;
